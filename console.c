@@ -825,7 +825,6 @@ int consolevgamode(int vgamode) {
 
         case 0x13: {
             writeVideoRegisters(registers_320x200x256);
-            memset(VGA_0x13_MEMORY, 0, (VGA_0x13_WIDTH * VGA_0x13_WIDTH));
 
             currentvgamode = 0x13;
             errorcode = 0;
