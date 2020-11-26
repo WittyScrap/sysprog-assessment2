@@ -675,10 +675,12 @@ uchar font_8x16[4096] =
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-// Set video plane.
-//
-// On entry, plane must be set to a value between 0 and 3
-static void setPlane(uchar plane) {
+/**
+ * Set video plane.
+ *
+ * On entry, plane must be set to a value between 0 and 3.
+ */
+void consolevgaplane(uchar plane) {
     uchar planeMask;
 
     plane &= 3;
@@ -764,7 +766,7 @@ void writeFont(uchar * fontBuffer, unsigned int fontHeight) {
     gc6 = inb(VGA_GC_DATA);
     outb(VGA_GC_DATA, gc6 & ~0x02);
 
-    setPlane(2);
+    consolevgaplane(2);
     // Write font to video memory
     fontBase = (uchar*)P2V(0xB8000);
     for (i = 0; i < 256; i++)
@@ -795,7 +797,7 @@ void writeFont(uchar * fontBuffer, unsigned int fontHeight) {
  *   0x12: 640x480x16 graphics mode.
  *   0x13: 320x200x256 graphics mode.
  */
-int consolesetvga(int vgamode) {
+int consolevgamode(int vgamode) {
     acquire(&cons.lock);
 
     int errorcode = -1;

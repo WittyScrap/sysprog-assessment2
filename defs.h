@@ -21,8 +21,9 @@ void            consoleinit(void);
 void            cprintf(char*, ...);
 void            consoleintr(int (*)(void));
 int             consoleget(void);
-int             consolesetvga(int);
-uchar*          consolevgabuffer();
+int             consolevgamode(int);
+uchar*          consolevgabuffer(void);
+void            consolevgaplane(uchar);
 void            panic(char*) __attribute__((noreturn));
 
 // exec.c
