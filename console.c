@@ -25,8 +25,12 @@ static void consputc(int);
 
 static int panicked = 0;
 
+/**
+ * Global console state shared between all processes and CPUs.
+ */
 static struct {
     struct spinlock lock;
+
     int locking;
 } cons;
 
