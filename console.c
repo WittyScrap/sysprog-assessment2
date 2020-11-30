@@ -16,6 +16,8 @@
 #include "x86.h"
 
 #define VGA_0x03_MEMORY P2V(0xb8000)
+#define VGA_0x03_WIDTH 80
+#define VGA_0x03_HEIGHT 25
 
 #define VGA_0x13_MEMORY P2V(0xA0000)
 #define VGA_0x13_WIDTH 320
@@ -24,6 +26,8 @@
 static void consputc(int);
 
 static int panicked = 0;
+
+uint currentvgamode = 0x03;
 
 /**
  * Global console state shared between all processes and CPUs.
@@ -356,8 +360,6 @@ void consoleinit(void) {
 #define	VGA_NUM_GC_REGS		9
 #define	VGA_NUM_AC_REGS		21
 #define	VGA_NUM_REGS		(1 + VGA_NUM_SEQ_REGS + VGA_NUM_CRTC_REGS + VGA_NUM_GC_REGS + VGA_NUM_AC_REGS)
-
-uchar currentvgamode = 0x03;
 
 uchar registers_80x25_text[] =
 {
