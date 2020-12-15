@@ -2,6 +2,9 @@
 #include "defs.h"
 #include "memlayout.h"
 
+// Standby buffer (backup)
+static uchar stby_buffer[VGA_0x03_MAXSIZE_BYTES] = { 0 };
+
 /** Syscalls --- */
 
 int sys_getch(void) {
@@ -23,21 +26,25 @@ int sys_setvideomode(void) {
         return -1;
     }
 
-    int hr = consolevgamode(mode);
-
     // Backup old vga mode and reset current vga mode
     switch (mode)
     {
         case 0x13:
-        memset(VGA_0x13_MEMORY, 0, VGA_0x13_WIDTH * VGA_0x13_HEIGHT * sizeof(uchar));
-        break;
+        case 0x12: {
+            memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);
+            int hr = consolevgamode(mode);
+            memset(VGA_0x13_MEMORY, 0, VGA_0x13_MAXSIZE_BYTES);
+            return hr;
+        }
 
-        case 0x03:
-        memset(VGA_0x03_MEMORY, 0, VGA_0x03_WIDTH * VGA_0x03_HEIGHT * sizeof(ushort));
-        break;
+        case 0x03: {
+            int hr = consolevgamode(mode);
+            memmove(VGA_0x03_MEMORY, stby_buffer, VGA_0x03_MAXSIZE_BYTES);
+            return hr;
+        }
     }
 
-    return hr;
+    return -1;
 }
 
 /**
