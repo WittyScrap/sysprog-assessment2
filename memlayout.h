@@ -13,3 +13,17 @@
 
 #define V2P_WO(x) ((x) - KERNBASE)    // same as V2P, but without casts
 #define P2V_WO(x) ((x) + KERNBASE)    // same as P2V, but without casts
+
+#define VGA_0x03_MEMORY P2V(0xb8000)
+#define VGA_0x03_WIDTH 80
+#define VGA_0x03_HEIGHT 25
+
+#define VGA_0x13_MEMORY P2V(0xA0000)
+#define VGA_0x13_WIDTH 320
+#define VGA_0x13_HEIGHT 200
+
+#define VGA_0x03_OFFSET(x, y) ((y) * VGA_0x03_WIDTH + (x))
+#define VGA_0x13_OFFSET(x, y) ((y) * VGA_0x13_WIDTH + (x))
+
+#define VGA_0x03_MAXSIZE VGA_0x03_WIDTH * VGA_0x03_HEIGHT
+#define VGA_0x13_MAXSIZE VGA_0x13_WIDTH * VGA_0x13_HEIGHT

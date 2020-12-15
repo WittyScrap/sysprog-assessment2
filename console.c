@@ -15,14 +15,6 @@
 #include "proc.h"
 #include "x86.h"
 
-#define VGA_0x03_MEMORY P2V(0xb8000)
-#define VGA_0x03_WIDTH 80
-#define VGA_0x03_HEIGHT 25
-
-#define VGA_0x13_MEMORY P2V(0xA0000)
-#define VGA_0x13_WIDTH 320
-#define VGA_0x13_HEIGHT 200
-
 static void consputc(int);
 
 static int panicked = 0;
