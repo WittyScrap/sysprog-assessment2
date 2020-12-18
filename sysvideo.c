@@ -1,9 +1,11 @@
 #include "types.h"
 #include "defs.h"
 #include "memlayout.h"
+#include "x86.h"
 
 // Standby buffer (backup)
 static uchar stby_buffer[VGA_0x03_MAXSIZE_BYTES] = { 0 };
+static uint stby_cursor = 0;
 
 /** Syscalls --- */
 
@@ -31,15 +33,35 @@ int sys_setvideomode(void) {
     {
         case 0x13:
         case 0x12: {
+            // Backup cursor position
+            outb(CRTPORT, 14);
+            stby_cursor = inb(CRTPORT + 1) << 8;
+            outb(CRTPORT, 15);
+            stby_cursor |= inb(CRTPORT + 1);
+
+            // Backup text mode memory
             memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);
+
+            // Switch to new vga mode
             int hr = consolevgamode(mode);
             memset(VGA_0x13_MEMORY, 0, VGA_0x13_MAXSIZE_BYTES);
+
             return hr;
         }
 
         case 0x03: {
+            // Switch to text mode
             int hr = consolevgamode(mode);
+
+            // Restore text mode backup
             memmove(VGA_0x03_MEMORY, stby_buffer, VGA_0x03_MAXSIZE_BYTES);
+            
+            // Restore cursor
+            outb(CRTPORT, 14);
+            outb(CRTPORT + 1, stby_cursor >> 8);
+            outb(CRTPORT, 15);
+            outb(CRTPORT + 1, stby_cursor);
+
             return hr;
         }
     }

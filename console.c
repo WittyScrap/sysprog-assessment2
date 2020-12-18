@@ -135,9 +135,6 @@ void panic(char *s) {
     }
 }
 
-#define BACKSPACE 0x100
-#define CRTPORT 0x3d4
-
 static void cgaputc(int c) {
     int pos;
     ushort* crt = VGA_0x03_MEMORY;

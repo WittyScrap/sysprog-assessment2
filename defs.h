@@ -194,3 +194,6 @@ void            clearpteu(pde_t *pgdir, char *uva);
 #define SIGN(x)     (((x) >= 0) - ((x) < 0))        // The sign of an integer or floating point number.
 #define MASK(x)     (-(!!(x)))                      // Generates a mask that is all 1s if the condition is true and all 0s if it is not
 #define ABS(x)      ((x) * (MASK((x) < 0) | 1))     // Retrieves the absolute value of a number
+
+#define BACKSPACE 0x100
+#define CRTPORT 0x3d4
