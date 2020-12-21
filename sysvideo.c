@@ -2,12 +2,71 @@
 #include "defs.h"
 #include "memlayout.h"
 #include "x86.h"
+#include <stddef.h>
 
 // Standby buffer (backup)
 static uchar stby_buffer[VGA_0x03_MAXSIZE_BYTES] = { 0 };
-static uint stby_cursor = 0;
+uint cursor = 0;
 
-/** Syscalls --- */
+// Current VGA mode
+extern uint currentvgamode;
+
+/** --- Video mode handlers --- */
+
+/**
+ * Retrives the current console text mode buffer.
+ * This will be a backup buffer if the selected VGA mode is not 0x03,
+ * if it is, it'll simply return VGA_0x03_MEMORY.
+ * 
+ */
+ushort* getcrtbuffer() {
+    size_t mask = MASK(currentvgamode == 0x03);
+    size_t ptr = (mask & (size_t)VGA_0x03_MEMORY) | (~mask & (size_t)stby_buffer);
+
+    return (ushort*)ptr;
+}
+
+/**
+ * Updates the cursor position.
+ * This function may need to either update the position through
+ * certain I/O ports or update the backed-up cursor location.
+ * 
+ * @param pos The new position of the cursor.
+ */
+void setcursorpos(uint pos) {
+    if (currentvgamode == 0x03) {
+        outb(CRTPORT, 14);
+        outb(CRTPORT + 1, pos >> 8);
+        outb(CRTPORT, 15);
+        outb(CRTPORT + 1, pos);
+    }
+
+    cursor = pos;
+}
+
+/**
+ * Retrieves hardware cursor position and updates 
+ * cached reference to cursor position to match.
+ * 
+ */
+void updatecursorpos()
+{
+    outb(CRTPORT, 14);
+    cursor = inb(CRTPORT + 1) << 8;
+    outb(CRTPORT, 15);
+    cursor |= inb(CRTPORT + 1);
+}
+
+/** --- Graphics functions --- */
+
+extern void __setpixel0x13(int x, int y, int c);
+extern void __setpixel0x12(int x, int y, int c);
+extern void __drawline0x13(int x0, int y0, int x1, int y1, int c);
+extern void __drawline0x12(int x0, int y0, int x1, int y1, int c);
+extern void __clearscr0x13(int c);
+extern void __clearscr0x12(int c);
+
+/** --- Syscalls --- */
 
 int sys_getch(void) {
     return consoleget();
@@ -34,10 +93,7 @@ int sys_setvideomode(void) {
         case 0x13:
         case 0x12: {
             // Backup cursor position
-            outb(CRTPORT, 14);
-            stby_cursor = inb(CRTPORT + 1) << 8;
-            outb(CRTPORT, 15);
-            stby_cursor |= inb(CRTPORT + 1);
+            updatecursorpos();
 
             // Backup text mode memory
             memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);
@@ -57,10 +113,7 @@ int sys_setvideomode(void) {
             memmove(VGA_0x03_MEMORY, stby_buffer, VGA_0x03_MAXSIZE_BYTES);
             
             // Restore cursor
-            outb(CRTPORT, 14);
-            outb(CRTPORT + 1, stby_cursor >> 8);
-            outb(CRTPORT, 15);
-            outb(CRTPORT + 1, stby_cursor);
+            setcursorpos(cursor);
 
             return hr;
         }

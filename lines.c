@@ -15,8 +15,10 @@ int main() {
     plotline(0,     199,    319,    0,      7);
     plotline(160,   0,      160,    199,    6);
 
+    printf(1, "This was printed in mode 0x13...\n");
+
     getch();
     setvideomode(0x03);
-
+    
     exit();
 }

@@ -190,6 +190,10 @@ void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
 
+// sysvideo.c
+extern uint     cursor;
+
+
 #define NELEM(x)    (sizeof(x) / sizeof((x)[0]))    // number of elements in fixed-size array
 #define SIGN(x)     (((x) >= 0) - ((x) < 0))        // The sign of an integer or floating point number.
 #define MASK(x)     (-(!!(x)))                      // Generates a mask that is all 1s if the condition is true and all 0s if it is not
