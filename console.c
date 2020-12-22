@@ -862,3 +862,22 @@ uchar* consolevgabuffer() {
 
     return base;
 }
+
+/**
+ * Selects a VGA plane and returns the virtual address to its
+ * memory.
+ * 
+ * On entry, plane must be set to a value between 0 and 3.
+ * 
+ * Note the mapping of CPU memory to video memory is not immediately obvious and, at first sight,
+ * this routine looks like it gives an incorrect value for plane 1. However, reading the article at
+ * http://www.osdever.net/FreeVGA/vga/vgamem.htm will give you more insight into what is going on.
+ *
+ * Returns a pointer to the virtual address (NOT the physical address) associated with the current
+ * video plane.
+ *
+ */
+uchar* consoleselectplane(uchar plane) {
+    consolevgaplane(plane);
+    return consolevgabuffer();
+}

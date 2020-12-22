@@ -82,7 +82,41 @@ void __setpixel0x13(int x, int y, int c) {
  * 
  */
 void __setpixel0x12(int x, int y, int c) {
+    uchar curr;
+    uchar* mem;
 
+    uint offset = VGA_0x12_OFFSET(x, y);
+    uchar bit = 7 - (offset % 8);
+
+    uchar mask = ~(1 << bit);
+
+    offset /= 8;
+    offset = MIN(offset, VGA_0x12_MAXSIZE_BYTES);
+    
+    uchar r = ((c & 0b0100) >> 2) << bit;
+    uchar g = ((c & 0b0010) >> 1) << bit;
+    uchar b = ((c & 0b0001) >> 0) << bit;
+    uchar l = ((c & 0b1000) >> 3) << bit;
+
+    mem = consoleselectplane(VGA_0x12_R);
+    curr = *(mem + offset);
+    curr = (curr & mask) | r;
+    *(mem + offset) = curr;
+
+    mem = consoleselectplane(VGA_0x12_G);
+    curr = *(mem + offset);
+    curr = (curr & mask) | g;
+    *(mem + offset) = curr;
+
+    mem = consoleselectplane(VGA_0x12_B);
+    curr = *(mem + offset);
+    curr = (curr & mask) | b;
+    *(mem + offset) = curr;
+
+    mem = consoleselectplane(VGA_0x12_L);
+    curr = *(mem + offset);
+    curr = (curr & mask) | l;
+    *(mem + offset) = curr;
 }
 
 /**
@@ -140,6 +174,33 @@ void __drawline0x13(int x0, int y0, int x1, int y1, int c) {
  * 
  */
 void __drawline0x12(int x0, int y0, int x1, int y1, int c) {
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+
+    int sx = SIGN(dx);
+    int sy = SIGN(dy);
+
+    dx = ABS(dx);
+    dy = ABS(dy);
+
+    int err = dx - dy;
+
+    x1 += sx;
+    y1 += sy;
+
+    do {
+        __setpixel0x12(x0, y0, c);
+
+        int e2 = 2 * err;
+        int c1 = MASK(e2 > -dy);
+        int c2 = MASK(e2 < dx);
+        
+        err -= dy & c1;
+        x0 += sx & c1;
+
+        err += dx & c2;
+        y0 += sy & c2;
+    } while(x0 != x1 && y0 != y1);
 }
 
 /**
@@ -167,17 +228,17 @@ void __clearscr0x12(int c) {
     b = MASK(b);
     l = MASK(l);
 
-    consolevgaplane(0);
-    memset(consolevgabuffer(), b, VGA_0x12_MAXSIZE_BYTES);
+    consolevgaplane(VGA_0x12_R);
+    memset(VGA_0x12_MEMORY, r, VGA_0x12_MAXSIZE_BYTES);
 
-    consolevgaplane(1);
-    memset(consolevgabuffer(), g, VGA_0x12_MAXSIZE_BYTES);
+    consolevgaplane(VGA_0x12_G);
+    memset(VGA_0x12_MEMORY, g, VGA_0x12_MAXSIZE_BYTES);
 
-    consolevgaplane(2);
-    memset(consolevgabuffer(), r, VGA_0x12_MAXSIZE_BYTES);
+    consolevgaplane(VGA_0x12_B);
+    memset(VGA_0x12_MEMORY, b, VGA_0x12_MAXSIZE_BYTES);
 
-    consolevgaplane(3);
-    memset(consolevgabuffer(), l, VGA_0x12_MAXSIZE_BYTES);
+    consolevgaplane(VGA_0x12_L);
+    memset(VGA_0x12_MEMORY, l, VGA_0x12_MAXSIZE_BYTES);
 }
 
 /** --- Syscalls --- */
