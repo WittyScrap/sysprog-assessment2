@@ -2,7 +2,7 @@
 #include "user.h"
 
 int main() {
-    setvideomode(0x13);
+    setvideomode(0x12);
     
     plotline(0,     0,      319,    199,    8);
     plotline(0,     25,     319,    175,    9);
@@ -15,7 +15,7 @@ int main() {
     plotline(0,     199,    319,    0,      7);
     plotline(160,   0,      160,    199,    6);
 
-    printf(1, "This was printed in mode 0x13...\n");
+    printf(1, "This was printed in mode 0x12...\n");
 
     getch();
     setvideomode(0x03);

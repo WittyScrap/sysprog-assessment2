@@ -57,14 +57,128 @@ void updatecursorpos()
     cursor |= inb(CRTPORT + 1);
 }
 
-/** --- Graphics functions --- */
 
-extern void __setpixel0x13(int x, int y, int c);
-extern void __setpixel0x12(int x, int y, int c);
-extern void __drawline0x13(int x0, int y0, int x1, int y1, int c);
-extern void __drawline0x12(int x0, int y0, int x1, int y1, int c);
-extern void __clearscr0x13(int c);
-extern void __clearscr0x12(int c);
+/**
+ * Sets a pixel at a given `x` and `y` coordinate to
+ * the given color `c`.
+ * 
+ * @param x The x coordinate
+ * @param y The y coordinate
+ * @param c The color of the pixel
+ * 
+ */
+void __setpixel0x13(int x, int y, int c) {
+    uint offset = VGA_0x13_OFFSET(x, y);
+    *((uchar*)VGA_0x13_MEMORY + MIN(offset, VGA_0x13_MAXSIZE)) = c;
+}
+
+/**
+ * Sets a pixel at a given `x` and `y` coordinate to
+ * the given color `c`.
+ * 
+ * @param x The x coordinate
+ * @param y The y coordinate
+ * @param c The color of the pixel
+ * 
+ */
+void __setpixel0x12(int x, int y, int c) {
+
+}
+
+/**
+ * Draws a line from `x0` and `y0` to `x1` and `y1` using
+ * the given color `c`.
+ * 
+ * @param x0 The starting x coordinate
+ * @param y0 The starting y coordinate
+ * @param x1 The target x coordinate
+ * @param y1 The target y coordinate
+ * 
+ */
+void __drawline0x13(int x0, int y0, int x1, int y1, int c) {
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+
+    int sx = SIGN(dx);
+    int sy = SIGN(dy);
+
+    dx = ABS(dx);
+    dy = ABS(dy);
+
+    int err = dx - dy;
+    uchar* vga = VGA_0x13_MEMORY;
+
+    x1 += sx;
+    y1 += sy;
+
+    uint offset = 0;
+
+    do {
+        offset = VGA_0x13_OFFSET(x0, y0);
+        *(vga + MIN(offset, VGA_0x13_MAXSIZE)) = c;
+
+        int e2 = 2 * err;
+        int c1 = MASK(e2 > -dy);
+        int c2 = MASK(e2 < dx);
+        
+        err -= dy & c1;
+        x0 += sx & c1;
+
+        err += dx & c2;
+        y0 += sy & c2;
+    } while(x0 != x1 && y0 != y1);
+}
+
+/**
+ * Draws a line from `x0` and `y0` to `x1` and `y1` using
+ * the given color `c`.
+ * 
+ * @param x0 The starting x coordinate
+ * @param y0 The starting y coordinate
+ * @param x1 The target x coordinate
+ * @param y1 The target y coordinate
+ * 
+ */
+void __drawline0x12(int x0, int y0, int x1, int y1, int c) {
+}
+
+/**
+ * Clears the screen to a given color `c`.
+ * 
+ * @param c The color to clear the screen with.
+ */
+void __clearscr0x13(int c) {
+    memset(VGA_0x13_MEMORY, c, VGA_0x13_MAXSIZE_BYTES);
+}
+
+/**
+ * Clears the screen to a given color `c`.
+ * 
+ * @param c The color to clear the screen with.
+ */
+void __clearscr0x12(int c) {
+    uchar r = (c & 0b0100) >> 2;
+    uchar g = (c & 0b0010) >> 1;
+    uchar b = (c & 0b0001) >> 0;
+    uchar l = (c & 0b1000) >> 3;
+
+    r = MASK(r);
+    g = MASK(g);
+    b = MASK(b);
+    l = MASK(l);
+
+    consolevgaplane(0);
+    memset(consolevgabuffer(), b, VGA_0x12_MAXSIZE_BYTES);
+
+    consolevgaplane(1);
+    memset(consolevgabuffer(), g, VGA_0x12_MAXSIZE_BYTES);
+
+    consolevgaplane(2);
+    memset(consolevgabuffer(), r, VGA_0x12_MAXSIZE_BYTES);
+
+    consolevgaplane(3);
+    memset(consolevgabuffer(), l, VGA_0x12_MAXSIZE_BYTES);
+}
 
 /** --- Syscalls --- */
 
@@ -90,30 +204,28 @@ int sys_setvideomode(void) {
     // Backup old vga mode and reset current vga mode
     switch (mode)
     {
-        case 0x13:
+        case 0x13: {
+            updatecursorpos();  // Backup cursor position
+            memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+            int hr = consolevgamode(mode); // Switch to new vga mode
+            __clearscr0x13(0); // Erase screen data
+
+            return hr;
+        }
+
         case 0x12: {
-            // Backup cursor position
-            updatecursorpos();
-
-            // Backup text mode memory
-            memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);
-
-            // Switch to new vga mode
-            int hr = consolevgamode(mode);
-            memset(VGA_0x13_MEMORY, 0, VGA_0x13_MAXSIZE_BYTES);
+            updatecursorpos();  // Backup cursor position
+            memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+            int hr = consolevgamode(mode); // Switch to new vga mode
+            __clearscr0x12(0); // Erase screen data
 
             return hr;
         }
 
         case 0x03: {
-            // Switch to text mode
-            int hr = consolevgamode(mode);
-
-            // Restore text mode backup
-            memmove(VGA_0x03_MEMORY, stby_buffer, VGA_0x03_MAXSIZE_BYTES);
-            
-            // Restore cursor
-            setcursorpos(cursor);
+            int hr = consolevgamode(mode); // Switch to text mode
+            memmove(VGA_0x03_MEMORY, stby_buffer, VGA_0x03_MAXSIZE_BYTES); // Restore text mode backup
+            setcursorpos(cursor); // Restore cursor
 
             return hr;
         }
@@ -143,10 +255,20 @@ int sys_setpixel(void) {
         return -1;
     }
 
-    uint offset = VGA_0x13_OFFSET(x, y);
-    offset = offset & MASK(offset < VGA_0x13_MAXSIZE);
-    uchar* vga = VGA_0x13_MEMORY + offset;
-    *vga = color;
+    switch (currentvgamode) {
+        case 0x03:
+            return -1;
+
+        case 0x12: {
+            __setpixel0x12(x, y, color);
+            break;
+        }
+
+        case 0x13: {
+            __setpixel0x13(x, y, color);
+            break;
+        }
+    }
 
     return 0;
 }
@@ -175,34 +297,20 @@ int sys_plotline(void) {
         return -1;
     }
 
-    int dx = x1 - x0;
-    int dy = y1 - y0;
+    switch (currentvgamode) {
+        case 0x03:
+            return -1;
 
-    int sx = SIGN(dx);
-    int sy = SIGN(dy);
+        case 0x12: {
+            __drawline0x12(x0, y0, x1, y1, color);
+            break;
+        }
 
-    dx = ABS(dx);
-    dy = ABS(dy);
-
-    int err = dx - dy;
-    uchar* vga = VGA_0x13_MEMORY;
-
-    x1 += sx;
-    y1 += sy;
-
-    do {
-        *(vga + VGA_0x13_OFFSET(x0, y0)) = color;
-
-        int e2 = 2 * err;
-        int c1 = MASK(e2 > -dy);
-        int c2 = MASK(e2 < dx);
-        
-        err -= dy & c1;
-        x0 += sx & c1;
-
-        err += dx & c2;
-        y0 += sy & c2;
-    } while(x0 != x1 && y0 != y1);
+        case 0x13: {
+            __drawline0x13(x0, y0, x1, y1, color);
+            break;
+        }
+    }
 
     return 0;
 }
