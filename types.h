@@ -8,3 +8,10 @@ enum {
 	false,
 	true,
 };
+
+enum BEGINMODE {
+	BM_0x12_BATCHED,
+	BM_0x12_IMMEDIATE,
+	BM_0x13_BATCHED,
+	BM_0x13_IMMEDIATE,
+};

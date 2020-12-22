@@ -5,8 +5,15 @@
 #include <stddef.h>
 
 // Standby buffer (backup)
-static uchar stby_buffer[VGA_0x03_MAXSIZE_BYTES] = { 0 };
+static uchar stbybuffer[VGA_0x03_MAXSIZE_BYTES] = { 0 };
 uint cursor = 0;
+
+// Back buffers
+uchar backbuff12hR[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+uchar backbuff12hG[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+uchar backbuff12hB[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+uchar backbuff12hL[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+uchar backbuff13h[VGA_0x13_MAXSIZE_BYTES] = { 0 };
 
 // Current VGA mode
 extern uint currentvgamode;
@@ -21,7 +28,7 @@ extern uint currentvgamode;
  */
 ushort* getcrtbuffer() {
     size_t mask = MASK(currentvgamode == 0x03);
-    size_t ptr = (mask & (size_t)VGA_0x03_MEMORY) | (~mask & (size_t)stby_buffer);
+    size_t ptr = (mask & (size_t)VGA_0x03_MEMORY) | (~mask & (size_t)stbybuffer);
 
     return (ushort*)ptr;
 }
@@ -49,8 +56,7 @@ void setcursorpos(uint pos) {
  * cached reference to cursor position to match.
  * 
  */
-void updatecursorpos()
-{
+void updatecursorpos() {
     outb(CRTPORT, 14);
     cursor = inb(CRTPORT + 1) << 8;
     outb(CRTPORT, 15);
@@ -267,7 +273,7 @@ int sys_setvideomode(void) {
     {
         case 0x13: {
             updatecursorpos();  // Backup cursor position
-            memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+            memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
             int hr = consolevgamode(mode); // Switch to new vga mode
             __clearscr0x13(0); // Erase screen data
 
@@ -276,7 +282,7 @@ int sys_setvideomode(void) {
 
         case 0x12: {
             updatecursorpos();  // Backup cursor position
-            memmove(stby_buffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+            memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
             int hr = consolevgamode(mode); // Switch to new vga mode
             __clearscr0x12(0); // Erase screen data
 
@@ -285,7 +291,7 @@ int sys_setvideomode(void) {
 
         case 0x03: {
             int hr = consolevgamode(mode); // Switch to text mode
-            memmove(VGA_0x03_MEMORY, stby_buffer, VGA_0x03_MAXSIZE_BYTES); // Restore text mode backup
+            memmove(VGA_0x03_MEMORY, stbybuffer, VGA_0x03_MAXSIZE_BYTES); // Restore text mode backup
             setcursorpos(cursor); // Restore cursor
 
             return hr;
@@ -374,4 +380,34 @@ int sys_plotline(void) {
     }
 
     return 0;
+}
+
+/**
+ * Presents the stored back buffer for the
+ * appropriate VGA mode into the front buffer.
+ * 
+ */
+int sys_present(void) {
+    switch (currentvgamode) {
+        case 0x13: {
+            // Trivial case, just copy back buffer into front buffer
+            memmove(VGA_0x13_MEMORY, backbuff13h, VGA_0x13_MAXSIZE_BYTES);
+        }
+
+        case 0x12: {
+            // Nontrivial case, select planes R through L and copy corresponding
+            // back buffers into front buffers.
+            consolevgaplane(VGA_0x12_R);
+            memmove(VGA_0x12_MEMORY, backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
+            
+            consolevgaplane(VGA_0x12_G);
+            memmove(VGA_0x12_MEMORY, backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
+
+            consolevgaplane(VGA_0x12_B);
+            memmove(VGA_0x12_MEMORY, backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
+
+            consolevgaplane(VGA_0x12_L);
+            memmove(VGA_0x12_MEMORY, backbuff12hL, VGA_0x12_MAXSIZE_BYTES);
+        }
+    }
 }

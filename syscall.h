@@ -24,3 +24,4 @@
 #define SYS_setvideomode 23
 #define SYS_setpixel     24
 #define SYS_plotline     25
+#define SYS_present      26

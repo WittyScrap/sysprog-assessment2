@@ -103,6 +103,7 @@ extern int sys_getch(void);
 extern int sys_setvideomode(void);
 extern int sys_setpixel(void);
 extern int sys_plotline(void);
+extern int sys_present(void);
 // TODO: Expose your system call assembly function to C.
 
 static int (*syscalls[])(void) = {
@@ -131,6 +132,7 @@ static int (*syscalls[])(void) = {
     [SYS_setvideomode]  sys_setvideomode,
     [SYS_setpixel]      sys_setpixel,
     [SYS_plotline]      sys_plotline,
+    [SYS_present]       sys_present,
     // TODO: Add your system call function to the OS syscall table.
 };
 
