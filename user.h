@@ -1,8 +1,8 @@
 struct stat;
 struct rtcdate;
-enum BEGINMODE;
 
 // system calls
+
 int fork(void);
 int exit(void) __attribute__((noreturn));
 int wait(void);
@@ -26,12 +26,15 @@ int sleep(int);
 int uptime(void);
 int getch(void);
 int setvideomode(int);
-int setpixel(int, int, int);
+int plotpixel(int, int, int);
 int plotline(int, int, int, int, int);
+int clear(int);
 int present(void);
 // TODO: Declare your user APIs for your system calls.
 
+
 // ulib.c
+
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
 void *memmove(void*, const void*, int);
@@ -44,7 +47,3 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
-
-// graphics.c
-void begingraphics(BEGINMODE mode);
-void endgraphics();

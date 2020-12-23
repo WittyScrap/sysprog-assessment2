@@ -1,22 +1,24 @@
 #include "types.h"
 #include "defs.h"
 #include "memlayout.h"
+#include "vga.h"
 #include "x86.h"
+#include "utils.h"
 #include <stddef.h>
 
 // Standby buffer (backup)
 static uchar stbybuffer[VGA_0x03_MAXSIZE_BYTES] = { 0 };
 uint cursor = 0;
 
-// Back buffers
-uchar backbuff12hR[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-uchar backbuff12hG[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-uchar backbuff12hB[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-uchar backbuff12hL[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-uchar backbuff13h[VGA_0x13_MAXSIZE_BYTES] = { 0 };
-
 // Current VGA mode
 extern uint currentvgamode;
+
+// Back buffers
+static uchar backbuff12hR[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+static uchar backbuff12hG[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+static uchar backbuff12hB[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+static uchar backbuff12hL[VGA_0x12_MAXSIZE_BYTES] = { 0 };
+static uchar backbuff13h [VGA_0x13_MAXSIZE_BYTES] = { 0 };
 
 /** --- Video mode handlers --- */
 
@@ -73,9 +75,9 @@ void updatecursorpos() {
  * @param c The color of the pixel
  * 
  */
-void __setpixel0x13(int x, int y, int c) {
+static void plotpixel0x13(int x, int y, int c) {
     uint offset = VGA_0x13_OFFSET(x, y);
-    *((uchar*)VGA_0x13_MEMORY + MIN(offset, VGA_0x13_MAXSIZE)) = c;
+    *(backbuff13h + MIN(offset, VGA_0x13_MAXSIZE)) = c;
 }
 
 /**
@@ -87,7 +89,7 @@ void __setpixel0x13(int x, int y, int c) {
  * @param c The color of the pixel
  * 
  */
-void __setpixel0x12(int x, int y, int c) {
+static void plotpixel0x12(int x, int y, int c) {
     uchar curr;
     uchar* mem;
 
@@ -104,22 +106,22 @@ void __setpixel0x12(int x, int y, int c) {
     uchar b = ((c & 0b0001) >> 0) << bit;
     uchar l = ((c & 0b1000) >> 3) << bit;
 
-    mem = consoleselectplane(VGA_0x12_R);
+    mem = backbuff12hR;
     curr = *(mem + offset);
     curr = (curr & mask) | r;
     *(mem + offset) = curr;
 
-    mem = consoleselectplane(VGA_0x12_G);
+    mem = backbuff12hG;
     curr = *(mem + offset);
     curr = (curr & mask) | g;
     *(mem + offset) = curr;
 
-    mem = consoleselectplane(VGA_0x12_B);
+    mem = backbuff12hB;
     curr = *(mem + offset);
     curr = (curr & mask) | b;
     *(mem + offset) = curr;
 
-    mem = consoleselectplane(VGA_0x12_L);
+    mem = backbuff12hL;
     curr = *(mem + offset);
     curr = (curr & mask) | l;
     *(mem + offset) = curr;
@@ -135,7 +137,7 @@ void __setpixel0x12(int x, int y, int c) {
  * @param y1 The target y coordinate
  * 
  */
-void __drawline0x13(int x0, int y0, int x1, int y1, int c) {
+static void plotline0x13(int x0, int y0, int x1, int y1, int c) {
     int dx = x1 - x0;
     int dy = y1 - y0;
 
@@ -146,7 +148,6 @@ void __drawline0x13(int x0, int y0, int x1, int y1, int c) {
     dy = ABS(dy);
 
     int err = dx - dy;
-    uchar* vga = VGA_0x13_MEMORY;
 
     x1 += sx;
     y1 += sy;
@@ -155,7 +156,7 @@ void __drawline0x13(int x0, int y0, int x1, int y1, int c) {
 
     do {
         offset = VGA_0x13_OFFSET(x0, y0);
-        *(vga + MIN(offset, VGA_0x13_MAXSIZE)) = c;
+        *(backbuff13h + MIN(offset, VGA_0x13_MAXSIZE)) = c;
 
         int e2 = 2 * err;
         int c1 = MASK(e2 > -dy);
@@ -179,7 +180,7 @@ void __drawline0x13(int x0, int y0, int x1, int y1, int c) {
  * @param y1 The target y coordinate
  * 
  */
-void __drawline0x12(int x0, int y0, int x1, int y1, int c) {
+static void plotline0x12(int x0, int y0, int x1, int y1, int c) {
     int dx = x1 - x0;
     int dy = y1 - y0;
 
@@ -195,7 +196,7 @@ void __drawline0x12(int x0, int y0, int x1, int y1, int c) {
     y1 += sy;
 
     do {
-        __setpixel0x12(x0, y0, c);
+        plotpixel0x12(x0, y0, c);
 
         int e2 = 2 * err;
         int c1 = MASK(e2 > -dy);
@@ -214,8 +215,8 @@ void __drawline0x12(int x0, int y0, int x1, int y1, int c) {
  * 
  * @param c The color to clear the screen with.
  */
-void __clearscr0x13(int c) {
-    memset(VGA_0x13_MEMORY, c, VGA_0x13_MAXSIZE_BYTES);
+static void clearscreen0x13(int c) {
+    memset(backbuff13h, c, VGA_0x13_MAXSIZE_BYTES);
 }
 
 /**
@@ -223,7 +224,7 @@ void __clearscr0x13(int c) {
  * 
  * @param c The color to clear the screen with.
  */
-void __clearscr0x12(int c) {
+static void clearscreen0x12(int c) {
     uchar r = (c & 0b0100) >> 2;
     uchar g = (c & 0b0010) >> 1;
     uchar b = (c & 0b0001) >> 0;
@@ -234,17 +235,10 @@ void __clearscr0x12(int c) {
     b = MASK(b);
     l = MASK(l);
 
-    consolevgaplane(VGA_0x12_R);
-    memset(VGA_0x12_MEMORY, r, VGA_0x12_MAXSIZE_BYTES);
-
-    consolevgaplane(VGA_0x12_G);
-    memset(VGA_0x12_MEMORY, g, VGA_0x12_MAXSIZE_BYTES);
-
-    consolevgaplane(VGA_0x12_B);
-    memset(VGA_0x12_MEMORY, b, VGA_0x12_MAXSIZE_BYTES);
-
-    consolevgaplane(VGA_0x12_L);
-    memset(VGA_0x12_MEMORY, l, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hR, r, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hG, g, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hB, b, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hL, l, VGA_0x12_MAXSIZE_BYTES);
 }
 
 /** --- Syscalls --- */
@@ -275,7 +269,7 @@ int sys_setvideomode(void) {
             updatecursorpos();  // Backup cursor position
             memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
             int hr = consolevgamode(mode); // Switch to new vga mode
-            __clearscr0x13(0); // Erase screen data
+            clearscreen0x13(0); // Erase screen data
 
             return hr;
         }
@@ -284,7 +278,7 @@ int sys_setvideomode(void) {
             updatecursorpos();  // Backup cursor position
             memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
             int hr = consolevgamode(mode); // Switch to new vga mode
-            __clearscr0x12(0); // Erase screen data
+            clearscreen0x12(0); // Erase screen data
 
             return hr;
         }
@@ -302,6 +296,40 @@ int sys_setvideomode(void) {
 }
 
 /**
+ * Clears the screen to a given color.
+ * 
+ * Note that this operation affects the back buffer. For this
+ * to be reflected to the screen, present() must be called.
+ * 
+ * @param color The color to use to clear the screen.
+ * 
+ */
+int sys_clear(void) {
+    int color;
+
+    if (argint(0, &color) < 0) {
+        return -1;
+    }
+
+    switch (currentvgamode) {
+        case 0x12: {
+            clearscreen0x12(color);
+            break;
+        }
+
+        case 0x13: {
+            clearscreen0x13(color);
+            break;
+        }
+
+        default:
+            return -1;
+    }
+
+    return 0;
+}
+
+/**
  * Plots a single pixel in any video mode.
  * Note that different video modes have different
  * limits.
@@ -309,11 +337,17 @@ int sys_setvideomode(void) {
  * Values are automatically clamped between 0 and the
  * maximum width/height combination.
  * 
+ * This is a system call, and will be executed immediately.
+ * If batching is used, prefer draw<x> functions over plot<x> functions.
+ * 
+ * Note that this operation affects the back buffer. For this
+ * to be reflected to the screen, present() must be called.
+ * 
  * @param x The x coordinate of the pixel.
  * @param y The y coordinate of the pixel.
  * @param color The color value of the pixel.
  */
-int sys_setpixel(void) {
+int sys_plotpixel(void) {
     int x;
     int y;
     int color;
@@ -327,12 +361,12 @@ int sys_setpixel(void) {
             return -1;
 
         case 0x12: {
-            __setpixel0x12(x, y, color);
+            plotpixel0x12(x, y, color);
             break;
         }
 
         case 0x13: {
-            __setpixel0x13(x, y, color);
+            plotpixel0x13(x, y, color);
             break;
         }
     }
@@ -346,6 +380,12 @@ int sys_setpixel(void) {
  * 
  * Values are automatically clamped between 0 and the
  * maximum width/height combination.
+ * 
+ * This is a system call, and will be executed immediately.
+ * If batching is used, prefer draw<x> functions over plot<x> functions.
+ * 
+ * Note that this operation affects the back buffer. For this
+ * to be reflected to the screen, present() must be called.
  * 
  * @param x0 Starting X coordinate
  * @param y0 Starting Y coordinate
@@ -369,12 +409,12 @@ int sys_plotline(void) {
             return -1;
 
         case 0x12: {
-            __drawline0x12(x0, y0, x1, y1, color);
+            plotline0x12(x0, y0, x1, y1, color);
             break;
         }
 
         case 0x13: {
-            __drawline0x13(x0, y0, x1, y1, color);
+            plotline0x13(x0, y0, x1, y1, color);
             break;
         }
     }
@@ -383,31 +423,31 @@ int sys_plotline(void) {
 }
 
 /**
- * Presents the stored back buffer for the
- * appropriate VGA mode into the front buffer.
+ * Presents the back buffer to the screen front buffer.
+ * This function must be called in order for any draw operations
+ * to be visible.
  * 
  */
 int sys_present(void) {
     switch (currentvgamode) {
         case 0x13: {
-            // Trivial case, just copy back buffer into front buffer
+            // Trivial case, bitblit back buffer to VGA addr
             memmove(VGA_0x13_MEMORY, backbuff13h, VGA_0x13_MAXSIZE_BYTES);
+            break;
         }
 
         case 0x12: {
-            // Nontrivial case, select planes R through L and copy corresponding
-            // back buffers into front buffers.
-            consolevgaplane(VGA_0x12_R);
-            memmove(VGA_0x12_MEMORY, backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
-            
-            consolevgaplane(VGA_0x12_G);
-            memmove(VGA_0x12_MEMORY, backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
-
-            consolevgaplane(VGA_0x12_B);
-            memmove(VGA_0x12_MEMORY, backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
-
-            consolevgaplane(VGA_0x12_L);
-            memmove(VGA_0x12_MEMORY, backbuff12hL, VGA_0x12_MAXSIZE_BYTES);
+            // Nontrivial case, bitblit each back buffer into each VGA address plane
+            memmove(consoleselectplane(VGA_0x12_R), backbuff12hR, VGA_0x12_MAXSIZE_BYTES);
+            memmove(consoleselectplane(VGA_0x12_G), backbuff12hG, VGA_0x12_MAXSIZE_BYTES);
+            memmove(consoleselectplane(VGA_0x12_B), backbuff12hB, VGA_0x12_MAXSIZE_BYTES);
+            memmove(consoleselectplane(VGA_0x12_L), backbuff12hL, VGA_0x12_MAXSIZE_BYTES);
+            break;
         }
+
+        default:
+            return -1;
     }
+
+    return 0;
 }

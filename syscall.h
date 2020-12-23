@@ -22,6 +22,7 @@
 #define SYS_close        21
 #define SYS_getch        22
 #define SYS_setvideomode 23
-#define SYS_setpixel     24
+#define SYS_plotpixel    24
 #define SYS_plotline     25
-#define SYS_present      26
+#define SYS_clear        26
+#define SYS_present      27

@@ -3,7 +3,7 @@
 
 int main() {
     setvideomode(0x12);
-    
+
     plotline(0,     0,      639,    480,    8);
     plotline(0,     60,     639,    420,    9);
     plotline(0,     120,    639,    360,    10);
@@ -16,6 +16,8 @@ int main() {
     plotline(320,   0,      320,    480,    6);
 
     printf(1, "This was printed in mode 0x12...\n");
+
+    present();
 
     getch();
     setvideomode(0x03);
