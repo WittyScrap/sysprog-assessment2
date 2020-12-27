@@ -272,51 +272,113 @@ static void plotrect0x13(int x, int y, int w, int h, int c) {
 static void plotrect0x12(int x, int y, int w, int h, int c) {
     VGA_UNWRAP_0x12_COLOR(c);
 
-    plotpixel0x12(x, y, c);
-    plotpixel0x12(x + w, y, c);
-    plotpixel0x12(x + w, y + h, c);
-    plotpixel0x12(x, y + h, c);
+    h += 1;
 
-    int offset = VGA_0x12_OFFSET(x, y);
-    offset = MIN(offset, VGA_0x12_MAXSIZE);
-    int byte = offset / 8;
-    uchar bit = offset % 8;
-    uchar mask = (bit - 1) | bit;
+    // Calculate the position of the "beginnig"
+    // of the rectangle (the left edge)...
+    int start = VGA_0x12_OFFSET(x, y);
+    start = MIN(start, VGA_0x12_MAXSIZE);
 
+    // Calculate the position of the "end"
+    // of the rectangle (the right edge)...
+    int end = VGA_0x12_OFFSET(x + w, y);
+    end = MIN(end, VGA_0x12_MAXSIZE);
+    
+    // Find which bit represents the edge between the rect
+    // and background
+    uchar bit = start % 8;
+    uchar startmask = ((bit - 1) | bit) | 1 << (bit - 1);   // Make a mask that has 1s where
+                                                            // the rect is and 0s where the bg is.
+                                                            // Here we add an extra bit to the left
+                                                            // to include the X position itself in the
+                                                            // rectangle.
+
+    // Repeat for right edge
+    bit = end % 8;
+    uchar endmask = ~(bit - 1) | bit;
+
+    int byte;
     int i = y;
 
     do {
         uchar value;
 
+        /**
+         * Fill in half bytes:
+         * The mask represents which parts of the edge
+         * byte are within the rectangle and which are outside of it.
+         * 
+         * For example, an edge byte that is 50% part of the rectangle
+         * will have its mask byte look like this:
+         * 
+         * 00001111
+         * 
+         * We simply have to erase the background where the mask is 1 and
+         * erase the replacement color's byte values where the mask is 0.
+         * 
+         * We do this by AND'ing the byte color channel with the mask and AND'ing
+         * the existing background byte value with NOT mask.
+         */
+
+        // The actual starting byte is simply the starting position
+        // divided by eight
+        byte = start / 8;
+
         value = *(backbuff12hR + byte);
-        value = (r & mask) | (value & ~mask);
+        value = (r & startmask) | (value & ~startmask);
         *(backbuff12hR + byte) = value;
 
         value = *(backbuff12hG + byte);
-        value = (g & mask) | (value & ~mask);
+        value = (g & startmask) | (value & ~startmask);
         *(backbuff12hG + byte) = value;
 
         value = *(backbuff12hB + byte);
-        value = (b & mask) | (value & ~mask);
+        value = (b & startmask) | (value & ~startmask);
         *(backbuff12hB + byte) = value;
 
         value = *(backbuff12hL + byte);
-        value = (l & mask) | (value & ~mask);
+        value = (l & startmask) | (value & ~startmask);
         *(backbuff12hL + byte) = value;
 
+        // Advance to next byte
         byte += 1;
-        int count = MIN(byte + w / 8, VGA_0x13_MAXSIZE_BYTES) - byte;
 
-        count -= 1;
+        // From now on we can fill the full byte, until one byte
+        // from the end (as that byte is likely also not going to be fully)
+        // filled.
+        int count = byte + w / 8;
+        count = MIN(count, VGA_0x12_MAXSIZE_BYTES) - byte - 1;
 
         memset(backbuff12hR + byte, r, count);
         memset(backbuff12hG + byte, g, count);
         memset(backbuff12hB + byte, b, count);
         memset(backbuff12hL + byte, l, count);
+
+        byte = end / 8;
+
+        // Apply above solution to partially fill end byte.
+
+        value = *(backbuff12hR + byte);
+        value = (r & endmask) | (value & ~endmask);
+        *(backbuff12hR + byte) = value;
+
+        value = *(backbuff12hG + byte);
+        value = (g & endmask) | (value & ~endmask);
+        *(backbuff12hG + byte) = value;
+
+        value = *(backbuff12hB + byte);
+        value = (b & endmask) | (value & ~endmask);
+        *(backbuff12hB + byte) = value;
+
+        value = *(backbuff12hL + byte);
+        value = (l & endmask) | (value & ~endmask);
+        *(backbuff12hL + byte) = value;
         
-        offset = VGA_0x12_OFFSET(x, i);
-        offset = MIN(offset, VGA_0x12_MAXSIZE);
-        byte = offset / 8;
+        start = VGA_0x12_OFFSET(x, i);
+        start = MIN(start, VGA_0x12_MAXSIZE);
+
+        end = VGA_0x12_OFFSET(x + w, i);
+        end = MIN(end, VGA_0x12_MAXSIZE);
 
         i += 1;
     } while(i <= y + h);
