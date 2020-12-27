@@ -30,6 +30,7 @@ int plotpixel(int, int, int);
 int plotline(int, int, int, int, int);
 int clear(int);
 int present(void);
+int flush(Batch*);
 // TODO: Declare your user APIs for your system calls.
 
 
@@ -47,3 +48,13 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+
+// graphics.c
+
+void begingraphics();
+void drawpoint(int, int, int);
+void drawline(int, int, int, int, int);
+void drawrect(int, int, int, int, int);
+void clearcolor(int);
+void endgraphics();

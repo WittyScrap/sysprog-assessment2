@@ -26,3 +26,13 @@
 #define VGA_0x12_G 1
 #define VGA_0x12_B 0
 #define VGA_0x12_L 3
+
+#define VGA_UNWRAP_0x12_COLOR_DECL(c)   uchar r = (c & 0b0100) >> 2;    \
+                                        uchar g = (c & 0b0010) >> 1;    \
+                                        uchar b = (c & 0b0001) >> 0;    \
+                                        uchar l = (c & 0b1000) >> 3;
+
+#define VGA_UNWRAP_0x12_COLOR_MASK(c)   r = MASK(r); g = MASK(g);       \
+                                        b = MASK(b); l = MASK(l);
+
+#define VGA_UNWRAP_0x12_COLOR(c)        VGA_UNWRAP_0x12_COLOR_DECL(c) VGA_UNWRAP_0x12_COLOR_MASK(c)

@@ -26,3 +26,4 @@
 #define SYS_plotline     25
 #define SYS_clear        26
 #define SYS_present      27
+#define SYS_flush        28

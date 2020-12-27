@@ -105,6 +105,7 @@ extern int sys_plotpixel(void);
 extern int sys_plotline(void);
 extern int sys_clear(void);
 extern int sys_present(void);
+extern int sys_flush(void);
 // TODO: Expose your system call assembly function to C.
 
 static int (*syscalls[])(void) = {
@@ -135,6 +136,7 @@ static int (*syscalls[])(void) = {
     [SYS_plotline]      sys_plotline,
     [SYS_clear]         sys_clear,
     [SYS_present]       sys_present,
+    [SYS_flush]         sys_flush,
     // TODO: Add your system call function to the OS syscall table.
 };
 

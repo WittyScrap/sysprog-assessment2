@@ -65,6 +65,7 @@ void updatecursorpos() {
     cursor |= inb(CRTPORT + 1);
 }
 
+/** --- Graphics functions --- */
 
 /**
  * Sets a pixel at a given `x` and `y` coordinate to
@@ -135,6 +136,7 @@ static void plotpixel0x12(int x, int y, int c) {
  * @param y0 The starting y coordinate
  * @param x1 The target x coordinate
  * @param y1 The target y coordinate
+ * @param c  The color of the line
  * 
  */
 static void plotline0x13(int x0, int y0, int x1, int y1, int c) {
@@ -178,6 +180,7 @@ static void plotline0x13(int x0, int y0, int x1, int y1, int c) {
  * @param y0 The starting y coordinate
  * @param x1 The target x coordinate
  * @param y1 The target y coordinate
+ * @param c  The color of the line
  * 
  */
 static void plotline0x12(int x0, int y0, int x1, int y1, int c) {
@@ -214,6 +217,7 @@ static void plotline0x12(int x0, int y0, int x1, int y1, int c) {
  * Clears the screen to a given color `c`.
  * 
  * @param c The color to clear the screen with.
+ * 
  */
 static void clearscreen0x13(int c) {
     memset(backbuff13h, c, VGA_0x13_MAXSIZE_BYTES);
@@ -223,22 +227,173 @@ static void clearscreen0x13(int c) {
  * Clears the screen to a given color `c`.
  * 
  * @param c The color to clear the screen with.
+ * 
  */
 static void clearscreen0x12(int c) {
-    uchar r = (c & 0b0100) >> 2;
-    uchar g = (c & 0b0010) >> 1;
-    uchar b = (c & 0b0001) >> 0;
-    uchar l = (c & 0b1000) >> 3;
-
-    r = MASK(r);
-    g = MASK(g);
-    b = MASK(b);
-    l = MASK(l);
+    VGA_UNWRAP_0x12_COLOR(c);
 
     memset(backbuff12hR, r, VGA_0x12_MAXSIZE_BYTES);
     memset(backbuff12hG, g, VGA_0x12_MAXSIZE_BYTES);
     memset(backbuff12hB, b, VGA_0x12_MAXSIZE_BYTES);
     memset(backbuff12hL, l, VGA_0x12_MAXSIZE_BYTES);
+}
+
+/**
+ * Draws a rectangle at a specific location `x`, `y` and
+ * with a specified size `w`, `h`, using a specified color `c`.
+ * 
+ * @param x The X coordinate of the top-left corner of the rectangle.
+ * @param y The Y coordinate of the top-left corner of the rectangle.
+ * @param w The width of the rectangle
+ * @param h The height of the rectangle
+ * @param c The color of the rectangle.
+ * 
+ */
+static void plotrect0x13(int x, int y, int w, int h, int c) {
+    for (int i = y; i <= y + h; i += 1) {
+        int offset = VGA_0x13_OFFSET(x, i);
+        int count = MIN(offset + w, VGA_0x13_MAXSIZE) - offset;
+
+        memset(backbuff13h, c, count);
+    }
+}
+
+/**
+ * Draws a rectangle at a specific location `x`, `y` and
+ * with a specified size `w`, `h`, using a specified color `c`.
+ * 
+ * @param x The X coordinate of the top-left corner of the rectangle.
+ * @param y The Y coordinate of the top-left corner of the rectangle.
+ * @param w The width of the rectangle
+ * @param h The height of the rectangle
+ * @param c The color of the rectangle.
+ * 
+ */
+static void plotrect0x12(int x, int y, int w, int h, int c) {
+    VGA_UNWRAP_0x12_COLOR(c);
+
+    plotpixel0x12(x, y, c);
+    plotpixel0x12(x + w, y, c);
+    plotpixel0x12(x + w, y + h, c);
+    plotpixel0x12(x, y + h, c);
+
+    int offset = VGA_0x12_OFFSET(x, y);
+    offset = MIN(offset, VGA_0x12_MAXSIZE);
+    int byte = offset / 8;
+    uchar bit = offset % 8;
+    uchar mask = (bit - 1) | bit;
+
+    int i = y;
+
+    do {
+        uchar value;
+
+        value = *(backbuff12hR + byte);
+        value = (r & mask) | (value & ~mask);
+        *(backbuff12hR + byte) = value;
+
+        value = *(backbuff12hG + byte);
+        value = (g & mask) | (value & ~mask);
+        *(backbuff12hG + byte) = value;
+
+        value = *(backbuff12hB + byte);
+        value = (b & mask) | (value & ~mask);
+        *(backbuff12hB + byte) = value;
+
+        value = *(backbuff12hL + byte);
+        value = (l & mask) | (value & ~mask);
+        *(backbuff12hL + byte) = value;
+
+        byte += 1;
+        int count = MIN(byte + w / 8, VGA_0x13_MAXSIZE_BYTES) - byte;
+
+        count -= 1;
+
+        memset(backbuff12hR + byte, r, count);
+        memset(backbuff12hG + byte, g, count);
+        memset(backbuff12hB + byte, b, count);
+        memset(backbuff12hL + byte, l, count);
+        
+        offset = VGA_0x12_OFFSET(x, i);
+        offset = MIN(offset, VGA_0x12_MAXSIZE);
+        byte = offset / 8;
+
+        i += 1;
+    } while(i <= y + h);
+}
+
+/** --- Syscall wrappers --- */
+
+/**
+ * Plots a single pixel at a given x, y coordinate.
+ * 
+ */
+static void scplotpixel(int x, int y, int c) {
+    switch (currentvgamode) {
+        case 0x12: {
+            plotpixel0x12(x, y, c);
+            break;
+        }
+
+        case 0x13: {
+            plotpixel0x13(x, y, c);
+            break;
+        }
+    }
+}
+
+/**
+ * Plots a line between two points.
+ * 
+ */
+static void scplotline(int x0, int y0, int x1, int y1, int c) {
+    switch (currentvgamode) {
+        case 0x12: {
+            plotline0x12(x0, y0, x1, y1, c);
+            break;
+        }
+
+        case 0x13: {
+            plotline0x13(x0, y0, x1, y1, c);
+            break;
+        }
+    }
+}
+
+/**
+ * Clears the screen.
+ * 
+ */
+static void scclear(int c) {
+    switch (currentvgamode) {
+        case 0x12: {
+            clearscreen0x12(c);
+            break;
+        }
+
+        case 0x13: {
+            clearscreen0x13(c);
+            break;
+        }
+    }
+}
+
+/**
+ * Draws a rectangle on the screen.
+ * 
+ */
+static void scplotrect(int x, int y, int w, int h, int c) {
+    switch (currentvgamode) {
+        case 0x12: {
+            plotrect0x12(x, y, w, h, c);
+            break;
+        }
+
+        case 0x13: {
+            plotrect0x13(x, y, w, h, c);
+            break;
+        }
+    }
 }
 
 /** --- Syscalls --- */
@@ -311,20 +466,7 @@ int sys_clear(void) {
         return -1;
     }
 
-    switch (currentvgamode) {
-        case 0x12: {
-            clearscreen0x12(color);
-            break;
-        }
-
-        case 0x13: {
-            clearscreen0x13(color);
-            break;
-        }
-
-        default:
-            return -1;
-    }
+    scclear(color);
 
     return 0;
 }
@@ -356,20 +498,7 @@ int sys_plotpixel(void) {
         return -1;
     }
 
-    switch (currentvgamode) {
-        case 0x03:
-            return -1;
-
-        case 0x12: {
-            plotpixel0x12(x, y, color);
-            break;
-        }
-
-        case 0x13: {
-            plotpixel0x13(x, y, color);
-            break;
-        }
-    }
+    scplotpixel(x, y, color);
 
     return 0;
 }
@@ -404,20 +533,7 @@ int sys_plotline(void) {
         return -1;
     }
 
-    switch (currentvgamode) {
-        case 0x03:
-            return -1;
-
-        case 0x12: {
-            plotline0x12(x0, y0, x1, y1, color);
-            break;
-        }
-
-        case 0x13: {
-            plotline0x13(x0, y0, x1, y1, color);
-            break;
-        }
-    }
+    scplotline(x0, x1, y0, y1, color);
 
     return 0;
 }
@@ -447,6 +563,51 @@ int sys_present(void) {
 
         default:
             return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * Flushes a queue of batched draw operations.
+ * 
+ * @param batch The batched operations queue.
+ * 
+ */
+int sys_flush(void) {
+    char* charops;
+
+    if (argptr(0, &charops, sizeof(BatchedCall)) < 0) {
+        return -1;
+    }
+
+    Batch* bops = (Batch*)((void*)charops);
+    
+    int count = bops->count;
+    BatchedOperation* ops = bops->ops; 
+
+    for (int i = 0; i < count; i += 1) {
+        switch(ops[i].type) {
+            case BC_POINT: {
+                scplotpixel(ops[i].data[0], ops[i].data[1], ops[i].color);
+                break;
+            }
+
+            case BC_LINE: {
+                scplotline(ops[i].data[0], ops[i].data[1], ops[i].data[2], ops[i].data[3], ops[i].color);
+                break;
+            }
+
+            case BC_RECT: {
+                scplotrect(ops[i].data[0], ops[i].data[1], ops[i].data[2], ops[i].data[3], ops[i].color);
+                break;
+            }
+
+            case BC_CLEAR: {
+                scclear(ops[i].color);
+                break;
+            }
+        }
     }
 
     return 0;
