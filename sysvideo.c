@@ -518,13 +518,7 @@ static const void(*mode13[])(int[static 10], int) = {
     // TODO: Add any further primitive functions...
 };
 
-/**
- * Strcutre used to switch between function sets.
- */
-static const void(*(*switcher[]))(int[static 10], int) = {
-    mode12,
-    mode13,
-};
+#define FUNCTIONSET(mode) ((void(**)(int[static 10], int))(((uint)mode12 * !mode) + ((uint)mode13 * mode)))
 
 /** --- Utilities --- */
 
@@ -609,7 +603,7 @@ int sys_clear(void) {
     }
 
     int index = currentvgamode - 0x12;
-    switcher[index][BC_CLEAR](NULL, color);
+    FUNCTIONSET(index)[BC_CLEAR](NULL, color);
 
     return 0;
 }
@@ -641,7 +635,7 @@ int sys_plotpixel(void) {
     }
 
     int index = currentvgamode - 0x12;
-    switcher[index][BC_POINT](params, color);
+    FUNCTIONSET(index)[BC_POINT](params, color);
 
     return 0;
 }
@@ -676,7 +670,7 @@ int sys_plotline(void) {
     }
 
     int index = currentvgamode - 0x12;
-    switcher[index][BC_LINE](params, color);
+    FUNCTIONSET(index)[BC_LINE](params, color);
 
     return 0;
 }
@@ -730,9 +724,10 @@ int sys_flush(void) {
     BatchedOperation* ops = bops->ops;
 
     int index = currentvgamode - 0x12;
+    void(**set)(int[static 10], int) = FUNCTIONSET(index);
 
     for (int i = 0; i < count; i += 1) {
-        switcher[index][ops[i].type](ops[i].data, ops[i].color);
+        set[ops[i].type](ops[i].data, ops[i].color);
     }
 
     return 0;
