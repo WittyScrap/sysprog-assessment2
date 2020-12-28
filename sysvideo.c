@@ -556,8 +556,7 @@ int sys_setvideomode(void) {
     }
 
     // Backup old vga mode and reset current vga mode
-    switch (mode)
-    {
+    switch (mode) {
         case 0x13: {
             backuptextmem();
             int hr = consolevgamode(mode); // Switch to new vga mode

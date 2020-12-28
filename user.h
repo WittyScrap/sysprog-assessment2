@@ -53,9 +53,10 @@ int atoi(const char*);
 // graphics.c
 
 void begingraphics();
-void drawpoint(int, int, int);
-void drawline(int, int, int, int, int);
-void drawrect(int, int, int, int, int);
-void drawcircle(int, int, int, int);
-void clearcolor(int);
+void drawpoint(int x, int y, int c);
+void drawline(int x0, int y0, int x1, int y1, int c);
+void drawrect(int x, int y, int w, int h, int c);
+void drawcircle(int x, int y, int r, int c);
+void drawpolygon(int count, int color, int x, int y, Vertex vertices[]);
+void clearcolor(int c);
 void endgraphics();

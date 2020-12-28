@@ -3,7 +3,6 @@
 
 // Batched operations
 static Batch operations;
-static int argstemp[10];
 
 /**
  * Begins a new graphics operation.
@@ -17,7 +16,7 @@ void begingraphics() {
  * Adds a new operation to the ops queue.
  * 
  */
-void addoperation(BatchedCall type, int c) {
+void addoperation(BatchedCall type, int c, ...) {
     if (operations.count >= MAX_BATCHED_OPS) {
         flush(&operations);
         operations.count = 0;
@@ -27,7 +26,8 @@ void addoperation(BatchedCall type, int c) {
     op.type = type;
     op.color = c;
 
-    memmove(op.data, argstemp, sizeof(argstemp));
+    int* params = (int*)(void*)(&c + 1);
+    memmove(op.data, params, sizeof(int) * MAX_BATCHED_DATA);
 
     operations.ops[operations.count] = op;
     operations.count += 1;
@@ -43,10 +43,7 @@ void addoperation(BatchedCall type, int c) {
  * 
  */
 void drawpoint(int x, int y, int c) {
-    argstemp[0] = x;
-    argstemp[1] = y;
-
-    addoperation(BC_POINT, c);
+    addoperation(BC_POINT, c, x, y);
 }
 
 /**
@@ -62,12 +59,7 @@ void drawpoint(int x, int y, int c) {
  * 
  */
 void drawline(int x0, int y0, int x1, int y1, int c) {
-    argstemp[0] = x0;
-    argstemp[1] = y0;
-    argstemp[2] = x1;
-    argstemp[3] = y1;
-
-    addoperation(BC_LINE, c);
+    addoperation(BC_LINE, c, x0, y0, x1, y1);
 }
 
 /**
@@ -82,12 +74,7 @@ void drawline(int x0, int y0, int x1, int y1, int c) {
  * 
  */
 void drawrect(int x, int y, int w, int h, int c) {
-    argstemp[0] = x;
-    argstemp[1] = y;
-    argstemp[2] = w;
-    argstemp[3] = h;
-
-    addoperation(BC_RECT, c);
+    addoperation(BC_RECT, c, x, y, w, h);
 }
 
 /**
@@ -101,11 +88,28 @@ void drawrect(int x, int y, int w, int h, int c) {
  * 
  */
 void drawcircle(int x, int y, int r, int c) {
-    argstemp[0] = x;
-    argstemp[1] = y;
-    argstemp[2] = r;
+    addoperation(BC_CIRCLE, c, x, y, r);
+}
+
+/**
+ * Draws a polygon consisting of a series of connected lines.
+ * 
+ * @param count The number of vertices to draw.
+ * @param color The color of the polygon.
+ * @param x An horizontal offset for each vertex of the polygon.
+ * @param y A vertical offset for each vertex of the polygon.
+ * @param vertices The vertices list.
+ * 
+ */
+void drawpolygon(int count, int color, int x, int y, Vertex vertices[]) {
+    Vertex a = *vertices;
     
-    addoperation(BC_CIRCLE, c);
+    for (int i = 1; i < count; i += 1) {
+        Vertex b = vertices[i];
+
+        addoperation(BC_LINE, color, a.x + x, a.y + y, b.x + x, b.y + y);
+        a = b;
+    }
 }
 
 /**

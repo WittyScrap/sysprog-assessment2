@@ -1,6 +1,34 @@
 #include "types.h"
 #include "user.h"
 
+Vertex star12h[11] = {
+    { 548, 274 },
+    { 566, 338 },
+    { 620, 340 },
+    { 576, 381 },
+    { 592, 446 },
+    { 548, 408 },
+    { 504, 446 },
+    { 520, 381 },
+    { 476, 340 },
+    { 530, 338 },
+    { 548, 273 },
+};
+
+Vertex star13h[11] = {
+    { 274, 114 },
+    { 283, 141 },
+    { 310, 142 },
+    { 288, 159 },
+    { 296, 186 },
+    { 274, 170 },
+    { 252, 186 },
+    { 260, 159 },
+    { 238, 142 },
+    { 265, 141 },
+    { 274, 114 },
+};
+
 int main() {
     setvideomode(0x12);
     begingraphics();
@@ -19,7 +47,8 @@ int main() {
     drawrect(300,   200,    250,    150,    6);
     drawrect(250,   100,    100,    200,    7);
     
-    drawcircle(200, 240,    120,     12);
+    drawcircle(200, 240, 120, 12);
+    drawpolygon(11, 15, 0, 0, star12h);
 
     printf(1, "This was the demo for mode 0x12...\n");
 
@@ -44,7 +73,8 @@ int main() {
     drawrect(150,   85,     125,    62,     6);
     drawrect(125,   40,     50,     85,     7);
 
-    drawcircle(100, 100,    50,     12);
+    drawcircle(100, 100, 50, 12);
+    drawpolygon(11, 15, 0, 0, star13h);
     
     printf(1, "This was the demo for mode 0x13...\n");
     
