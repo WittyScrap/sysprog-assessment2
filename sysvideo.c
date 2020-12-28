@@ -81,7 +81,7 @@ static void plotpixel0x13(int params[static 10], int c) {
     int y = params[1];
 
     uint offset = VGA_0x13_OFFSET(x, y);
-    *(backbuff13h + MIN(offset, VGA_0x13_MAXSIZE)) = c;
+    backbuff13h[MIN(offset, VGA_0x13_MAXSIZE)] = c;
 }
 
 /**
@@ -98,7 +98,6 @@ static void plotpixel0x12(int params[static 10], int c) {
     int y = params[1];
 
     uchar curr;
-    uchar* mem;
 
     uint offset = VGA_0x12_OFFSET(x, y);
     uchar bit = 7 - (offset % 8);
@@ -113,25 +112,21 @@ static void plotpixel0x12(int params[static 10], int c) {
     uchar b = ((c & 0b0001) >> 0) << bit;
     uchar l = ((c & 0b1000) >> 3) << bit;
 
-    mem = backbuff12hR;
-    curr = *(mem + offset);
+    curr = backbuff12hR[offset];
     curr = (curr & mask) | r;
-    *(mem + offset) = curr;
+    backbuff12hR[offset] = curr;
 
-    mem = backbuff12hG;
-    curr = *(mem + offset);
+    curr = backbuff12hG[offset];
     curr = (curr & mask) | g;
-    *(mem + offset) = curr;
+    backbuff12hG[offset] = curr;
 
-    mem = backbuff12hB;
-    curr = *(mem + offset);
+    curr = backbuff12hB[offset];
     curr = (curr & mask) | b;
-    *(mem + offset) = curr;
+    backbuff12hB[offset] = curr;
 
-    mem = backbuff12hL;
-    curr = *(mem + offset);
+    curr = backbuff12hL[offset];
     curr = (curr & mask) | l;
-    *(mem + offset) = curr;
+    backbuff12hL[offset] = curr;
 }
 
 /**
@@ -169,7 +164,7 @@ static void plotline0x13(int params[static 10], int c) {
 
     do {
         offset = VGA_0x13_OFFSET(x0, y0);
-        *(backbuff13h + MIN(offset, VGA_0x13_MAXSIZE)) = c;
+        backbuff13h[MIN(offset, VGA_0x13_MAXSIZE)] = c;
 
         int e2 = 2 * err;
         int c1 = MASK(e2 > -dy);
@@ -230,31 +225,6 @@ static void plotline0x12(int params[static 10], int c) {
         err += dx & c2;
         y0 += sy & c2;
     } while(x0 != x1 && y0 != y1);
-}
-
-/**
- * Clears the screen to a given color `c`.
- * 
- * @param c The color to clear the screen with.
- * 
- */
-static void clearscreen0x13(int params[static 10], int c) {
-    memset(backbuff13h, c, VGA_0x13_MAXSIZE_BYTES);
-}
-
-/**
- * Clears the screen to a given color `c`.
- * 
- * @param c The color to clear the screen with.
- * 
- */
-static void clearscreen0x12(int params[static 10], int c) {
-    VGA_UNWRAP_0x12_COLOR(c);
-
-    memset(backbuff12hR, r, VGA_0x12_MAXSIZE_BYTES);
-    memset(backbuff12hG, g, VGA_0x12_MAXSIZE_BYTES);
-    memset(backbuff12hB, b, VGA_0x12_MAXSIZE_BYTES);
-    memset(backbuff12hL, l, VGA_0x12_MAXSIZE_BYTES);
 }
 
 /**
@@ -353,21 +323,21 @@ static void plotrect0x12(int params[static 10], int c) {
         // divided by eight
         byte = start / 8;
 
-        value = *(backbuff12hR + byte);
+        value = backbuff12hR[byte];
         value = (r & startmask) | (value & ~startmask);
-        *(backbuff12hR + byte) = value;
+        backbuff12hR[byte] = value;
 
-        value = *(backbuff12hG + byte);
+        value = backbuff12hG[byte];
         value = (g & startmask) | (value & ~startmask);
-        *(backbuff12hG + byte) = value;
+        backbuff12hG[byte] = value;
 
-        value = *(backbuff12hB + byte);
+        value = backbuff12hB[byte];
         value = (b & startmask) | (value & ~startmask);
-        *(backbuff12hB + byte) = value;
+        backbuff12hB[byte] = value;
 
-        value = *(backbuff12hL + byte);
+        value = backbuff12hL[byte];
         value = (l & startmask) | (value & ~startmask);
-        *(backbuff12hL + byte) = value;
+        backbuff12hL[byte] = value;
 
         // Advance to next byte
         byte += 1;
@@ -387,21 +357,21 @@ static void plotrect0x12(int params[static 10], int c) {
 
         // Apply above solution to partially fill end byte.
 
-        value = *(backbuff12hR + byte);
+        value = backbuff12hR[byte];
         value = (r & endmask) | (value & ~endmask);
-        *(backbuff12hR + byte) = value;
+        backbuff12hR[byte] = value;
 
-        value = *(backbuff12hG + byte);
+        value = backbuff12hG[byte];
         value = (g & endmask) | (value & ~endmask);
-        *(backbuff12hG + byte) = value;
+        backbuff12hG[byte] = value;
 
-        value = *(backbuff12hB + byte);
+        value = backbuff12hB[byte];
         value = (b & endmask) | (value & ~endmask);
-        *(backbuff12hB + byte) = value;
+        backbuff12hB[byte] = value;
 
-        value = *(backbuff12hL + byte);
+        value = backbuff12hL[byte];
         value = (l & endmask) | (value & ~endmask);
-        *(backbuff12hL + byte) = value;
+        backbuff12hL[byte] = value;
         
         start = VGA_0x12_OFFSET(x, i);
         start = MIN(start, VGA_0x12_MAXSIZE);
@@ -414,15 +384,109 @@ static void plotrect0x12(int params[static 10], int c) {
 }
 
 /**
- * Stores the entirety of text memory into
- * a standby buffer.
+ * Plots a circle at a given location and with a given
+ * radius and color.
+ * 
+ * @param x The X coordinate of the circle's center
+ * @param y The Y coordinate of the circle's center
+ * @param c The color of the circle
  * 
  */
-void backuptextmem() {
-    if (currentvgamode == 0x03) {
-        updatecursorpos();  // Backup cursor position
-        memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+static void plotcircle0x13(int params[static 10], int c) {
+    int cx = params[0];
+    int cy = params[1];
+    int r = params[2];
+
+    for (int y = -r; y < r; y += 1) {
+        for (int x = -r; x < r; x += 1) {
+            int px = cx + x;
+            int py = cy + y;
+
+            int ic = x * x + y * y < r * r;
+
+            uint offset = VGA_0x13_OFFSET(px, py);
+            offset = MIN(offset, VGA_0x13_MAXSIZE_BYTES);
+
+            uchar value = backbuff13h[offset];
+            value = (value * !ic) + (c * ic);
+            backbuff13h[offset] = value;
+        }
     }
+}
+
+/**
+ * Plots a circle at a given location and with a given
+ * radius and color.
+ * 
+ * @param x The X coordinate of the circle's center
+ * @param y The Y coordinate of the circle's center
+ * @param c The color of the circle
+ * 
+ */
+static void plotcircle0x12(int params[static 10], int c) {
+    VGA_UNWRAP_0x12_COLOR(c);
+
+    int cx = params[0];
+    int cy = params[1];
+    int cr = params[2];
+
+    for (int y = -cr; y < cr; y += 1) {
+        for (int x = -cr; x < cr; x += 1) {
+            int px = cx + x;
+            int py = cy + y;
+
+            uchar ic = MASK(x * x + y * y < cr * cr);
+
+            uint offset = VGA_0x12_OFFSET(px, py);
+            offset = MIN(offset, VGA_0x12_MAXSIZE);
+            uchar bit = 7 - (offset % 8);
+            uchar mask = 1 << bit;
+            offset /= 8;
+
+            uchar value;
+
+            value = backbuff12hR[offset];
+            value = (value & ~mask) | ((value & ~ic) | (r & ic & mask));
+            backbuff12hR[offset] = value;
+
+            value = backbuff12hG[offset];
+            value = (value & ~mask) | ((value & ~ic) | (g & ic & mask));
+            backbuff12hG[offset] = value;
+
+            value = backbuff12hB[offset];
+            value = (value & ~mask) | ((value & ~ic) | (b & ic & mask));
+            backbuff12hB[offset] = value;
+
+            value = backbuff12hL[offset];
+            value = (value & ~mask) | ((value & ~ic) | (l & ic & mask));
+            backbuff12hL[offset] = value;
+        }
+    }
+}
+
+/**
+ * Clears the screen to a given color `c`.
+ * 
+ * @param c The color to clear the screen with.
+ * 
+ */
+static void clearscreen0x13(int params[static 10], int c) {
+    memset(backbuff13h, c, VGA_0x13_MAXSIZE_BYTES);
+}
+
+/**
+ * Clears the screen to a given color `c`.
+ * 
+ * @param c The color to clear the screen with.
+ * 
+ */
+static void clearscreen0x12(int params[static 10], int c) {
+    VGA_UNWRAP_0x12_COLOR(c);
+
+    memset(backbuff12hR, r, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hG, g, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hB, b, VGA_0x12_MAXSIZE_BYTES);
+    memset(backbuff12hL, l, VGA_0x12_MAXSIZE_BYTES);
 }
 
 /** --- Function switchers --- */
@@ -433,10 +497,11 @@ void backuptextmem() {
  * mode 12 functions...
  */
 static const void(*mode12[])(int[static 10], int) = {
+    [BC_CLEAR]  clearscreen0x12,
     [BC_POINT]  plotpixel0x12,
     [BC_LINE]   plotline0x12,
     [BC_RECT]   plotrect0x12,
-    [BC_CLEAR]  clearscreen0x12,
+    [BC_CIRCLE] plotcircle0x12,
     // TODO: Add any further primitive functions...
 };
 
@@ -445,10 +510,11 @@ static const void(*mode12[])(int[static 10], int) = {
  * mode 13 functions...
  */
 static const void(*mode13[])(int[static 10], int) = {
+    [BC_CLEAR]  clearscreen0x13,
     [BC_POINT]  plotpixel0x13,
     [BC_LINE]   plotline0x13,
     [BC_RECT]   plotrect0x13,
-    [BC_CLEAR]  clearscreen0x13,
+    [BC_CIRCLE] plotcircle0x13,
     // TODO: Add any further primitive functions...
 };
 
@@ -459,6 +525,20 @@ static const void(*(*switcher[]))(int[static 10], int) = {
     mode12,
     mode13,
 };
+
+/** --- Utilities --- */
+
+/**
+ * Stores the entirety of text memory into
+ * a standby buffer.
+ * 
+ */
+void backuptextmem() {
+    if (currentvgamode == 0x03) {
+        updatecursorpos();  // Backup cursor position
+        memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+    }
+}
 
 /** --- Syscalls --- */
 
@@ -589,10 +669,8 @@ int sys_plotline(void) {
     int params[4];
     int color;
 
-    if (argint(0, &(params[0])) < 0 ||
-        argint(1, &(params[1])) < 0 ||
-        argint(2, &(params[2])) < 0 ||
-        argint(3, &(params[3])) < 0 ||
+    if (argint(0, &(params[0])) < 0 || argint(1, &(params[1])) < 0 ||
+        argint(2, &(params[2])) < 0 || argint(3, &(params[3])) < 0 ||
         argint(4, &color) < 0) {
         return -1;
     }

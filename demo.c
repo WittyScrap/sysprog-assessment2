@@ -18,6 +18,8 @@ int main() {
 
     drawrect(300,   200,    250,    150,    6);
     drawrect(250,   100,    100,    200,    7);
+    
+    drawcircle(200, 240,    120,     12);
 
     printf(1, "This was the demo for mode 0x12...\n");
 
@@ -41,6 +43,8 @@ int main() {
     
     drawrect(150,   85,     125,    62,     6);
     drawrect(125,   40,     50,     85,     7);
+
+    drawcircle(100, 100,    50,     12);
     
     printf(1, "This was the demo for mode 0x13...\n");
     
