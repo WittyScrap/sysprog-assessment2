@@ -56,5 +56,6 @@ void begingraphics();
 void drawpoint(int, int, int);
 void drawline(int, int, int, int, int);
 void drawrect(int, int, int, int, int);
+void drawcircle(int, int, int, int);
 void clearcolor(int);
 void endgraphics();

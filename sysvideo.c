@@ -76,7 +76,10 @@ void updatecursorpos() {
  * @param c The color of the pixel
  * 
  */
-static void plotpixel0x13(int x, int y, int c) {
+static void plotpixel0x13(int params[static 10], int c) {
+    int x = params[0];
+    int y = params[1];
+
     uint offset = VGA_0x13_OFFSET(x, y);
     *(backbuff13h + MIN(offset, VGA_0x13_MAXSIZE)) = c;
 }
@@ -90,7 +93,10 @@ static void plotpixel0x13(int x, int y, int c) {
  * @param c The color of the pixel
  * 
  */
-static void plotpixel0x12(int x, int y, int c) {
+static void plotpixel0x12(int params[static 10], int c) {
+    int x = params[0];
+    int y = params[1];
+
     uchar curr;
     uchar* mem;
 
@@ -139,7 +145,12 @@ static void plotpixel0x12(int x, int y, int c) {
  * @param c  The color of the line
  * 
  */
-static void plotline0x13(int x0, int y0, int x1, int y1, int c) {
+static void plotline0x13(int params[static 10], int c) {
+    int x0 = params[0];
+    int y0 = params[1];
+    int x1 = params[2];
+    int y1 = params[3];
+
     int dx = x1 - x0;
     int dy = y1 - y0;
 
@@ -183,7 +194,12 @@ static void plotline0x13(int x0, int y0, int x1, int y1, int c) {
  * @param c  The color of the line
  * 
  */
-static void plotline0x12(int x0, int y0, int x1, int y1, int c) {
+static void plotline0x12(int params[static 10], int c) {
+    int x0 = params[0];
+    int y0 = params[1];
+    int x1 = params[2];
+    int y1 = params[3];
+
     int dx = x1 - x0;
     int dy = y1 - y0;
 
@@ -199,7 +215,10 @@ static void plotline0x12(int x0, int y0, int x1, int y1, int c) {
     y1 += sy;
 
     do {
-        plotpixel0x12(x0, y0, c);
+        params[0] = x0;
+        params[1] = y0;
+
+        plotpixel0x12(params, c);
 
         int e2 = 2 * err;
         int c1 = MASK(e2 > -dy);
@@ -219,7 +238,7 @@ static void plotline0x12(int x0, int y0, int x1, int y1, int c) {
  * @param c The color to clear the screen with.
  * 
  */
-static void clearscreen0x13(int c) {
+static void clearscreen0x13(int params[static 10], int c) {
     memset(backbuff13h, c, VGA_0x13_MAXSIZE_BYTES);
 }
 
@@ -229,7 +248,7 @@ static void clearscreen0x13(int c) {
  * @param c The color to clear the screen with.
  * 
  */
-static void clearscreen0x12(int c) {
+static void clearscreen0x12(int params[static 10], int c) {
     VGA_UNWRAP_0x12_COLOR(c);
 
     memset(backbuff12hR, r, VGA_0x12_MAXSIZE_BYTES);
@@ -249,12 +268,17 @@ static void clearscreen0x12(int c) {
  * @param c The color of the rectangle.
  * 
  */
-static void plotrect0x13(int x, int y, int w, int h, int c) {
+static void plotrect0x13(int params[static 10], int c) {
+    int x = params[0];
+    int y = params[1];
+    int w = params[2];
+    int h = params[3];
+
     for (int i = y; i <= y + h; i += 1) {
         int offset = VGA_0x13_OFFSET(x, i);
         int count = MIN(offset + w, VGA_0x13_MAXSIZE) - offset;
 
-        memset(backbuff13h, c, count);
+        memset(backbuff13h + offset, c, count);
     }
 }
 
@@ -269,7 +293,12 @@ static void plotrect0x13(int x, int y, int w, int h, int c) {
  * @param c The color of the rectangle.
  * 
  */
-static void plotrect0x12(int x, int y, int w, int h, int c) {
+static void plotrect0x12(int params[static 10], int c) {
+    int x = params[0];
+    int y = params[1];
+    int w = params[2];
+    int h = params[3];
+
     VGA_UNWRAP_0x12_COLOR(c);
 
     h += 1;
@@ -384,79 +413,52 @@ static void plotrect0x12(int x, int y, int w, int h, int c) {
     } while(i <= y + h);
 }
 
-/** --- Syscall wrappers --- */
-
 /**
- * Plots a single pixel at a given x, y coordinate.
+ * Stores the entirety of text memory into
+ * a standby buffer.
  * 
  */
-static void scplotpixel(int x, int y, int c) {
-    switch (currentvgamode) {
-        case 0x12: {
-            plotpixel0x12(x, y, c);
-            break;
-        }
-
-        case 0x13: {
-            plotpixel0x13(x, y, c);
-            break;
-        }
+void backuptextmem() {
+    if (currentvgamode == 0x03) {
+        updatecursorpos();  // Backup cursor position
+        memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
     }
 }
 
-/**
- * Plots a line between two points.
- * 
- */
-static void scplotline(int x0, int y0, int x1, int y1, int c) {
-    switch (currentvgamode) {
-        case 0x12: {
-            plotline0x12(x0, y0, x1, y1, c);
-            break;
-        }
+/** --- Function switchers --- */
 
-        case 0x13: {
-            plotline0x13(x0, y0, x1, y1, c);
-            break;
-        }
-    }
-}
 
 /**
- * Clears the screen.
- * 
+ * Here we store a pointer to all relevant
+ * mode 12 functions...
  */
-static void scclear(int c) {
-    switch (currentvgamode) {
-        case 0x12: {
-            clearscreen0x12(c);
-            break;
-        }
-
-        case 0x13: {
-            clearscreen0x13(c);
-            break;
-        }
-    }
-}
+static const void(*mode12[])(int[static 10], int) = {
+    [BC_POINT]  plotpixel0x12,
+    [BC_LINE]   plotline0x12,
+    [BC_RECT]   plotrect0x12,
+    [BC_CLEAR]  clearscreen0x12,
+    // TODO: Add any further primitive functions...
+};
 
 /**
- * Draws a rectangle on the screen.
- * 
+ * Here we store a pointer to all relevant
+ * mode 13 functions...
  */
-static void scplotrect(int x, int y, int w, int h, int c) {
-    switch (currentvgamode) {
-        case 0x12: {
-            plotrect0x12(x, y, w, h, c);
-            break;
-        }
+static const void(*mode13[])(int[static 10], int) = {
+    [BC_POINT]  plotpixel0x13,
+    [BC_LINE]   plotline0x13,
+    [BC_RECT]   plotrect0x13,
+    [BC_CLEAR]  clearscreen0x13,
+    // TODO: Add any further primitive functions...
+};
 
-        case 0x13: {
-            plotrect0x13(x, y, w, h, c);
-            break;
-        }
-    }
-}
+/**
+ * Strcutre used to switch between function sets.
+ */
+static const void(*(*switcher[]))(int[static 10], int) = {
+    mode12,
+    mode13,
+};
 
 /** --- Syscalls --- */
 
@@ -483,19 +485,17 @@ int sys_setvideomode(void) {
     switch (mode)
     {
         case 0x13: {
-            updatecursorpos();  // Backup cursor position
-            memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+            backuptextmem();
             int hr = consolevgamode(mode); // Switch to new vga mode
-            clearscreen0x13(0); // Erase screen data
+            clearscreen0x13(NULL, 0); // Erase screen data
 
             return hr;
         }
 
         case 0x12: {
-            updatecursorpos();  // Backup cursor position
-            memmove(stbybuffer, VGA_0x03_MEMORY, VGA_0x03_MAXSIZE_BYTES);  // Backup text mode memory
+            backuptextmem();
             int hr = consolevgamode(mode); // Switch to new vga mode
-            clearscreen0x12(0); // Erase screen data
+            clearscreen0x12(NULL, 0); // Erase screen data
 
             return hr;
         }
@@ -528,7 +528,8 @@ int sys_clear(void) {
         return -1;
     }
 
-    scclear(color);
+    int index = currentvgamode - 0x12;
+    switcher[index][BC_CLEAR](NULL, color);
 
     return 0;
 }
@@ -552,15 +553,15 @@ int sys_clear(void) {
  * @param color The color value of the pixel.
  */
 int sys_plotpixel(void) {
-    int x;
-    int y;
+    int params[2];
     int color;
 
-    if (argint(0, &x) < 0 || argint(1, &y) < 0 || argint(2, &color)) {
+    if (argint(0, &(params[0])) < 0 || argint(1, &(params[1])) < 0 || argint(2, &color)) {
         return -1;
     }
 
-    scplotpixel(x, y, color);
+    int index = currentvgamode - 0x12;
+    switcher[index][BC_POINT](params, color);
 
     return 0;
 }
@@ -585,17 +586,19 @@ int sys_plotpixel(void) {
  * @param color The color of the line
  */
 int sys_plotline(void) {
-    int x0;
-    int y0;
-    int x1;
-    int y1;
+    int params[4];
     int color;
 
-    if (argint(0, &x0) < 0 || argint(1, &y0) < 0 || argint(2, &x1) < 0 || argint(3, &y1) < 0 || argint(4, &color) < 0) {
+    if (argint(0, &(params[0])) < 0 ||
+        argint(1, &(params[1])) < 0 ||
+        argint(2, &(params[2])) < 0 ||
+        argint(3, &(params[3])) < 0 ||
+        argint(4, &color) < 0) {
         return -1;
     }
 
-    scplotline(x0, x1, y0, y1, color);
+    int index = currentvgamode - 0x12;
+    switcher[index][BC_POINT](params, color);
 
     return 0;
 }
@@ -646,30 +649,12 @@ int sys_flush(void) {
     Batch* bops = (Batch*)((void*)charops);
     
     int count = bops->count;
-    BatchedOperation* ops = bops->ops; 
+    BatchedOperation* ops = bops->ops;
+
+    int index = currentvgamode - 0x12;
 
     for (int i = 0; i < count; i += 1) {
-        switch(ops[i].type) {
-            case BC_POINT: {
-                scplotpixel(ops[i].data[0], ops[i].data[1], ops[i].color);
-                break;
-            }
-
-            case BC_LINE: {
-                scplotline(ops[i].data[0], ops[i].data[1], ops[i].data[2], ops[i].data[3], ops[i].color);
-                break;
-            }
-
-            case BC_RECT: {
-                scplotrect(ops[i].data[0], ops[i].data[1], ops[i].data[2], ops[i].data[3], ops[i].color);
-                break;
-            }
-
-            case BC_CLEAR: {
-                scclear(ops[i].color);
-                break;
-            }
-        }
+        switcher[index][ops[i].type](ops[i].data, ops[i].color);
     }
 
     return 0;

@@ -91,6 +91,24 @@ void drawrect(int x, int y, int w, int h, int c) {
 }
 
 /**
+ * Draws a filled circle with its center at `x`, `y`
+ * of radius `r` with color `c`.
+ * 
+ * @param x The x coordinate of the center of the circle
+ * @param y The y coordinate of the center of the circle
+ * @param r The radius of the circle
+ * @param c The color of the circle
+ * 
+ */
+void drawcircle(int x, int y, int r, int c) {
+    argstemp[0] = x;
+    argstemp[1] = y;
+    argstemp[2] = r;
+    
+    addoperation(BC_CIRCLE, c);
+}
+
+/**
  * Clears the screen to a specified color `c`.
  * 
  * @param c The color to clear the screen to.

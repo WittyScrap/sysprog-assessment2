@@ -16,7 +16,8 @@ typedef enum {
     BC_LINE,
     BC_CLEAR,
     BC_RECT,
-    // TODO: Add remaining primitives...
+    BC_CIRCLE,
+    // TODO: Add more primitives...
 } BatchedCall;
 
 typedef struct {
