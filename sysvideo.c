@@ -723,10 +723,15 @@ int sys_flush(void) {
     int count = bops->count;
     BatchedOperation* ops = bops->ops;
 
+    // Mode index should be 0 for mode 12 and 1 for mode 13
+    // This will yield undefined results in modes other than 12 or 13
     int index = currentvgamode - 0x12;
-    void(**set)(int[static 10], int) = FUNCTIONSET(index);
+    void(**set)(int[static 10], int) = FUNCTIONSET(index); // Find the appropriate functions set (for mode 12 or 13)
 
     for (int i = 0; i < count; i += 1) {
+        // From the set, pick the function for the primitive we are about to draw
+        // by using the BatchedCall type stored in the current BatchedOperation, then call it using
+        // the operation's argument data and the stored color.
         set[ops[i].type](ops[i].data, ops[i].color);
     }
 
