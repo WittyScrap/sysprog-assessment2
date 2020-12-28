@@ -598,7 +598,7 @@ int sys_plotline(void) {
     }
 
     int index = currentvgamode - 0x12;
-    switcher[index][BC_POINT](params, color);
+    switcher[index][BC_LINE](params, color);
 
     return 0;
 }
