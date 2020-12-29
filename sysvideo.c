@@ -518,7 +518,7 @@ static const void(*mode13[])(int[static 10], int) = {
     // TODO: Add any further primitive functions...
 };
 
-#define FUNCTIONSET(mode) ((void(**)(int[static 10], int))(((uint)mode12 * !mode) + ((uint)mode13 * mode)))
+#define FUNCTIONSET(mode) ((void(**)(int[static 10], int))(((uint)mode12 * ((mode) == 0x12)) + ((uint)mode13 * ((mode) == 0x13))))
 
 /** --- Utilities --- */
 
@@ -601,8 +601,7 @@ int sys_clear(void) {
         return -1;
     }
 
-    int index = currentvgamode - 0x12;
-    FUNCTIONSET(index)[BC_CLEAR](NULL, color);
+    FUNCTIONSET(currentvgamode)[BC_CLEAR](NULL, color);
 
     return 0;
 }
@@ -633,8 +632,7 @@ int sys_plotpixel(void) {
         return -1;
     }
 
-    int index = currentvgamode - 0x12;
-    FUNCTIONSET(index)[BC_POINT](params, color);
+    FUNCTIONSET(currentvgamode)[BC_POINT](params, color);
 
     return 0;
 }
@@ -668,8 +666,7 @@ int sys_plotline(void) {
         return -1;
     }
 
-    int index = currentvgamode - 0x12;
-    FUNCTIONSET(index)[BC_LINE](params, color);
+    FUNCTIONSET(currentvgamode)[BC_LINE](params, color);
 
     return 0;
 }
@@ -722,10 +719,8 @@ int sys_flush(void) {
     int count = bops->count;
     BatchedOperation* ops = bops->ops;
 
-    // Mode index should be 0 for mode 12 and 1 for mode 13
     // This will yield undefined results in modes other than 12 or 13
-    int index = currentvgamode - 0x12;
-    void(**set)(int[static 10], int) = FUNCTIONSET(index); // Find the appropriate functions set (for mode 12 or 13)
+    void(**set)(int[static 10], int) = FUNCTIONSET(currentvgamode); // Find the appropriate functions set (for mode 12 or 13)
 
     for (int i = 0; i < count; i += 1) {
         // From the set, pick the function for the primitive we are about to draw
