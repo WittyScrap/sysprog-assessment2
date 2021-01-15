@@ -13,12 +13,15 @@ uint cursor = 0;
 // Current VGA mode
 extern uint currentvgamode;
 
-// Back buffers
-static uchar backbuff12hR[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-static uchar backbuff12hG[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-static uchar backbuff12hB[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-static uchar backbuff12hL[VGA_0x12_MAXSIZE_BYTES] = { 0 };
-static uchar backbuff13h [VGA_0x13_MAXSIZE_BYTES] = { 0 };
+// Back buffer
+static uchar backbuffer[VGA_0x12_MAXSIZE_BYTES * 4] = { 0 };
+
+// Label referencers
+static uchar* backbuff12hR = (uchar*)(backbuffer);
+static uchar* backbuff12hG = (uchar*)(backbuffer + VGA_0x12_MAXSIZE_BYTES);
+static uchar* backbuff12hB = (uchar*)(backbuffer + VGA_0x12_MAXSIZE_BYTES * 2);
+static uchar* backbuff12hL = (uchar*)(backbuffer + VGA_0x12_MAXSIZE_BYTES * 3);
+static uchar* backbuff13h  = (uchar*)(backbuffer);
 
 /** --- Video mode handlers --- */
 
