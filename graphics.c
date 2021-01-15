@@ -122,6 +122,15 @@ void drawimage(int img, int x, int y) {
 }
 
 /**
+ * Draws an empty, 1px thick rectangle frame at location
+ * `x`, `y`, of size `w`, `h`, with color `c`.
+ *
+ */
+void drawemptyrect(int x, int y, int w, int h, int c) {
+    addoperation(BC_EMPTYRECT, c, x, y, w, h);
+}
+
+/**
  * Clears the screen to a specified color `c`.
  * 
  * @param c The color to clear the screen to.

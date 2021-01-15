@@ -506,7 +506,7 @@ static void plotimage0x13(int params[static 10], int c) {
     const int x = params[1];
     const int y = params[2];
 
-    int stride = bmp->width;
+    int stride = bmp->stride;
     int height = bmp->height;
 
     for (int i = 0; i < height; i += 1) {
@@ -524,6 +524,54 @@ static void plotimage0x12(int params[static 10], int c) {
     cprintf("Note: indexed bitmaps cannot be drawn in mode 0x12...");
 }
 
+/**
+ * Draws an empty rectangle in mode 0x13.
+ * 
+ */
+static void plotemptyrect0x13(int params[static 10], int c) {
+    int x = params[0];
+    int y = params[1];
+    int w = params[2];
+    int h = params[3];
+
+    memset(backbuff13h + VGA_0x13_OFFSET(x, y), c, w);
+    memset(backbuff13h + VGA_0x13_OFFSET(x, y + h), c, w + 1);
+
+    for (int end = y + h; y < end; y += 1) {
+        *(backbuff13h + VGA_0x13_OFFSET(x, y)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x + w, y)) = c;
+    }
+}
+
+/**
+ * Draws an empty rectangle in mode 0x12.
+ * 
+ */
+static void plotemptyrect0x12(int params[static 10], int c) {
+    int x = params[0];
+    int y = params[1];
+    int w = params[2];
+    int h = params[3];
+
+    int p[2];
+
+    for (int endx = x + w; x < endx; x += 1) {
+        p[0] = x; p[1] = y;
+        plotpixel0x12(p, c);
+        
+        p[1] = y + h;
+        plotpixel0x12(p, c);
+    }
+
+    for (int endy = y + h; y < endy; y += 1) {
+        p[0] = x - w; p[1] = y;
+        plotpixel0x12(p, c);
+        
+        p[0] = x;
+        plotpixel0x12(p, c);
+    }
+}
+
 /** --- Function switchers --- */
 
 
@@ -532,12 +580,13 @@ static void plotimage0x12(int params[static 10], int c) {
  * mode 12 functions...
  */
 static const void(*mode12[])(int[static 10], int) = {
-    [BC_CLEAR]  clearscreen0x12,
-    [BC_POINT]  plotpixel0x12,
-    [BC_LINE]   plotline0x12,
-    [BC_RECT]   plotrect0x12,
-    [BC_CIRCLE] plotcircle0x12,
-    [BC_IMAGE]  plotimage0x12,
+    [BC_CLEAR]      clearscreen0x12,
+    [BC_POINT]      plotpixel0x12,
+    [BC_LINE]       plotline0x12,
+    [BC_RECT]       plotrect0x12,
+    [BC_CIRCLE]     plotcircle0x12,
+    [BC_IMAGE]      plotimage0x12,
+    [BC_EMPTYRECT]  plotemptyrect0x12,
     // TODO: Add any further primitive functions...
 };
 
@@ -546,12 +595,13 @@ static const void(*mode12[])(int[static 10], int) = {
  * mode 13 functions...
  */
 static const void(*mode13[])(int[static 10], int) = {
-    [BC_CLEAR]  clearscreen0x13,
-    [BC_POINT]  plotpixel0x13,
-    [BC_LINE]   plotline0x13,
-    [BC_RECT]   plotrect0x13,
-    [BC_CIRCLE] plotcircle0x13,
-    [BC_IMAGE]  plotimage0x13,
+    [BC_CLEAR]      clearscreen0x13,
+    [BC_POINT]      plotpixel0x13,
+    [BC_LINE]       plotline0x13,
+    [BC_RECT]       plotrect0x13,
+    [BC_CIRCLE]     plotcircle0x13,
+    [BC_IMAGE]      plotimage0x13,
+    [BC_EMPTYRECT]  plotemptyrect0x13,
     // TODO: Add any further primitive functions...
 };
 
@@ -770,16 +820,27 @@ int sys_flush(void) {
 }
 
 /**
+ * Bitmap offsets
+ * 
+ */
+enum
+{
+    BMP_WIDTH = 0x12,
+    BMP_HEIGHT = 0x16,
+    BMP_OFFSET = 0x0A,
+};
+
+/**
  * Loads a bitmap stored in `filename`.
  * 
  */
 int sys_loadbitmap() {
     char* filename;
     bitmap* img = images + lastimage;
-    int* ret;
+    image* ret;
     struct inode *ip;
 
-    if (argptr(0, &filename, sizeof(char*)) < 0 || argptr(1, (char**)&ret, sizeof(int*) < 0)) {
+    if (argptr(0, &filename, sizeof(char*)) < 0 || argptr(1, (char**)&ret, sizeof(image*)) < 0) {
         return -1;
     }
 
@@ -794,32 +855,37 @@ int sys_loadbitmap() {
     ilock(ip);
 
     // Read in bitmap width and height
-    readi(ip, (char*)&img->width, 0x12, sizeof(ushort));
-    readi(ip, (char*)&img->height, 0x16, sizeof(ushort));
+    readi(ip, (char*)&img->stride, BMP_WIDTH, sizeof(ushort));
+    readi(ip, (char*)&img->height, BMP_HEIGHT, sizeof(ushort));
 
-    cprintf("Loaded image of width: %d, height: %d\n", img->width, img->height);
+    cprintf("Loaded image of width: %d, height: %d\n", img->stride, img->height);
+
+    img->size = img->stride * img->height;
     
     int dataOffset = 0;
 
     // Read data offset to know where to start reading image
     // data from
-    readi(ip, (char*)&dataOffset, 0x0A, sizeof(ushort));
+    readi(ip, (char*)&dataOffset, BMP_OFFSET, sizeof(ushort));
 
     // Now read bitmap data into temporary buffer
-    char data[img->width * img->height];
-    readi(ip, data, dataOffset, img->width * img->height);
+    char data[img->size];
+    readi(ip, data, dataOffset, img->size);
     
     end_op();
     iunlockput(ip);
 
     // Cache to skip one indirection
-    int stride = img->width;
+    int stride = img->stride;
 
     for (int y = img->height - 1, pos = 0; y >= 0; y -= 1, pos += stride) {
         memmove(img->data + pos, data + y * stride, stride);
     }
 
-    *ret = lastimage;
+    ret->width = stride;
+    ret->height = img->height;
+    ret->id = lastimage;
+
     lastimage += 1;
 
     return 0;

@@ -19,6 +19,7 @@ typedef enum {
     BC_RECT,
     BC_CIRCLE,
     BC_IMAGE,
+    BC_EMPTYRECT
     // TODO: Add more primitives...
 } batchedcall;
 
@@ -41,7 +42,14 @@ typedef struct {
 #define MAX_BITMAP_SIZE_BYTES 2048
 
 typedef struct {
-    int width;
     int height;
+    int stride;
+    int size;
     char data[MAX_BITMAP_SIZE_BYTES];
 } bitmap;
+
+typedef struct {
+    int width;
+    int height;
+    int id;
+} image;

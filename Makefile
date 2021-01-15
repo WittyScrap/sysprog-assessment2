@@ -173,23 +173,25 @@ mkfs: mkfs.c fs.h
 
 UPROGS=\
 	_cat\
+	_demo\
 	_echo\
 	_forktest\
 	_grep\
+	_hexdump\
 	_init\
 	_kill\
 	_ln\
 	_ls\
 	_mkdir\
 	_rm\
+	_sans.exe\
 	_sh\
+	_show\
 	_stressfs\
 	_wc\
 	_zombie\
-	_demo\
-	_hexdump\
 
-USERFILES=image.bmp
+USERFILES=image.bmp sans.bmp
 
 fs.img: mkfs $(USERFILES) $(UPROGS)
 	./mkfs fs.img  $(USERFILES) $(UPROGS)

@@ -44,8 +44,8 @@ int main() {
     drawline(0,     480,    639,    0,      7);
     drawline(320,   0,      320,    480,    6);
 
-    drawrect(300,   200,    250,    150,    6);
-    drawrect(250,   100,    100,    200,    7);
+    drawrect     (300,   200,    250,    150,    6);
+    drawemptyrect(250,   100,    100,    200,    7);
     
     drawcircle(200, 240, 120, 12);
     drawpolygon(11, 15, 0, 0, star12h);
@@ -70,15 +70,11 @@ int main() {
     drawline(0,     200,    319,    0,      7);
     drawline(160,   0,      160,    200,    6);
     
-    drawrect(150,   85,     125,    62,     6);
-    drawrect(125,   40,     50,     85,     15);
+    drawrect     (150,   85,     125,    62,     6);
+    drawemptyrect(125,   40,     50,     85,     15);
 
     drawcircle(100, 100, 50, 12);
     drawpolygon(11, 15, 0, 0, star13h);
-    
-    int test;
-    loadbitmap("image.bmp", &test);
-    drawimage(test, 10, 10);
     
     printf(1, "This was the demo for mode 0x13...\n");
     
