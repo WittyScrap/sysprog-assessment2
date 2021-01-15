@@ -20,6 +20,10 @@ static uchar backbuff12hB[VGA_0x12_MAXSIZE_BYTES] = { 0 };
 static uchar backbuff12hL[VGA_0x12_MAXSIZE_BYTES] = { 0 };
 static uchar backbuff13h [VGA_0x13_MAXSIZE_BYTES] = { 0 };
 
+// Image storage
+static bitmap images[10];
+static uint lastimage;
+
 /** --- Video mode handlers --- */
 
 /**
@@ -489,6 +493,35 @@ static void clearscreen0x12(int params[static 10], int c) {
     memset(backbuff12hL, l, VGA_0x12_MAXSIZE_BYTES);
 }
 
+/**
+ * Draws an image in mode 0x13.
+ * 
+ */
+static void plotimage0x13(int params[static 10], int c) {
+    const int img = params[0];
+    const bitmap* bmp = &images[img];
+
+    const int x = params[1];
+    const int y = params[2];
+
+    int stride = bmp->width;
+    int height = bmp->height;
+
+    for (int i = 0; i < height; i += 1) {
+        memmove(backbuff13h + VGA_0x13_OFFSET(x, i + y), bmp->data + i * stride, stride);
+    }
+}
+
+/**
+ * Draws an image in mode 0x12.
+ * This function does nothing, as indexed bitmaps cannot
+ * be drawn in mode 0x12.
+ * 
+ */
+static void plotimage0x12(int params[static 10], int c) {
+    cprintf("Note: indexed bitmaps cannot be drawn in mode 0x12...");
+}
+
 /** --- Function switchers --- */
 
 
@@ -502,6 +535,7 @@ static const void(*mode12[])(int[static 10], int) = {
     [BC_LINE]   plotline0x12,
     [BC_RECT]   plotrect0x12,
     [BC_CIRCLE] plotcircle0x12,
+    [BC_IMAGE]  plotimage0x12,
     // TODO: Add any further primitive functions...
 };
 
@@ -515,6 +549,7 @@ static const void(*mode13[])(int[static 10], int) = {
     [BC_LINE]   plotline0x13,
     [BC_RECT]   plotrect0x13,
     [BC_CIRCLE] plotcircle0x13,
+    [BC_IMAGE]  plotimage0x13,
     // TODO: Add any further primitive functions...
 };
 
@@ -710,24 +745,80 @@ int sys_present(void) {
 int sys_flush(void) {
     char* charops;
 
-    if (argptr(0, &charops, sizeof(BatchedCall)) < 0) {
+    if (argptr(0, &charops, sizeof(batchedcall)) < 0) {
         return -1;
     }
 
-    Batch* bops = (Batch*)((void*)charops);
+    batchedqueue* bops = (batchedqueue*)((void*)charops);
     
     int count = bops->count;
-    BatchedOperation* ops = bops->ops;
+    batchedoperation* ops = bops->ops;
 
     // This will yield undefined results in modes other than 12 or 13
     void(**set)(int[static 10], int) = FUNCTIONSET(currentvgamode); // Find the appropriate functions set (for mode 12 or 13)
 
     for (int i = 0; i < count; i += 1) {
         // From the set, pick the function for the primitive we are about to draw
-        // by using the BatchedCall type stored in the current BatchedOperation, then call it using
+        // by using the batchedcall type stored in the current batchedoperation, then call it using
         // the operation's argument data and the stored color.
         set[ops[i].type](ops[i].data, ops[i].color);
     }
+
+    return 0;
+}
+
+/**
+ * Loads a bitmap stored in `filename`.
+ * 
+ */
+int sys_loadbitmap() {
+    char* filename;
+    bitmap* img = images + lastimage;
+    int* ret;
+    struct inode *ip;
+
+    if (argptr(0, &filename, sizeof(char*)) < 0 || argptr(1, (char**)&ret, sizeof(int*) < 0)) {
+        return -1;
+    }
+
+    begin_op();
+
+    if ((ip = namei(filename)) == 0) {
+        end_op();
+        cprintf("File not found: %s", filename);
+        return -1;
+    }
+
+    ilock(ip);
+
+    // Read in bitmap width and height
+    readi(ip, (char*)&img->width, 0x12, sizeof(ushort));
+    readi(ip, (char*)&img->height, 0x16, sizeof(ushort));
+
+    cprintf("Loaded image of width: %d, height: %d\n", img->width, img->height);
+    
+    int dataOffset = 0;
+
+    // Read data offset to know where to start reading image
+    // data from
+    readi(ip, (char*)&dataOffset, 0x0A, sizeof(ushort));
+
+    // Now read bitmap data into temporary buffer
+    char data[img->width * img->height];
+    readi(ip, data, dataOffset, img->width * img->height);
+    
+    end_op();
+    iunlockput(ip);
+
+    // Cache to skip one indirection
+    int stride = img->width;
+
+    for (int y = img->height - 1, pos = 0; y >= 0; y -= 1, pos += stride) {
+        memmove(img->data + pos, data + y * stride, stride);
+    }
+
+    *ret = lastimage;
+    lastimage += 1;
 
     return 0;
 }

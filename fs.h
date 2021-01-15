@@ -41,7 +41,7 @@ struct dinode {
 // Block containing inode i
 #define IBLOCK(i, sb)     ((i) / IPB + sb.inodestart)
 
-// Bitmap bits per block
+// bitmap bits per block
 #define BPB           (BSIZE * 8)
 
 // Block of free map containing bit for block b

@@ -27,3 +27,4 @@
 #define SYS_clear        26
 #define SYS_present      27
 #define SYS_flush        28
+#define SYS_loadbitmap   29

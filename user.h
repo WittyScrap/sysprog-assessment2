@@ -30,7 +30,8 @@ int plotpixel(int, int, int);
 int plotline(int, int, int, int, int);
 int clear(int);
 int present(void);
-int flush(Batch*);
+int flush(batchedqueue*);
+int loadbitmap(const char*, int*);
 // TODO: Declare your user APIs for your system calls.
 
 
@@ -57,6 +58,7 @@ void drawpoint(int x, int y, int c);
 void drawline(int x0, int y0, int x1, int y1, int c);
 void drawrect(int x, int y, int w, int h, int c);
 void drawcircle(int x, int y, int r, int c);
-void drawpolygon(int count, int color, int x, int y, Vertex vertices[]);
+void drawpolygon(int count, int color, int x, int y, point vertices[]);
+void drawimage(int img, int x, int y);
 void clearcolor(int c);
 void endgraphics();

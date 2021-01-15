@@ -18,21 +18,30 @@ typedef enum {
     BC_CLEAR,
     BC_RECT,
     BC_CIRCLE,
+    BC_IMAGE,
     // TODO: Add more primitives...
-} BatchedCall;
+} batchedcall;
 
 typedef struct {
-    BatchedCall type;
+    batchedcall type;
     int color;
     int data[MAX_BATCHED_DATA];
-} BatchedOperation;
+} batchedoperation;
 
 typedef struct {
-    BatchedOperation ops[MAX_BATCHED_OPS];
+    batchedoperation ops[MAX_BATCHED_OPS];
     int count;
-} Batch;
+} batchedqueue;
 
 typedef struct {
     int x;
     int y;
-} Vertex;
+} point;
+
+#define MAX_BITMAP_SIZE_BYTES 2048
+
+typedef struct {
+    int width;
+    int height;
+    char data[MAX_BITMAP_SIZE_BYTES];
+} bitmap;

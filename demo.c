@@ -1,7 +1,7 @@
 #include "types.h"
 #include "user.h"
 
-Vertex star12h[11] = {
+point star12h[11] = {
     { 548, 274 },
     { 566, 338 },
     { 620, 340 },
@@ -15,7 +15,7 @@ Vertex star12h[11] = {
     { 548, 273 },
 };
 
-Vertex star13h[11] = {
+point star13h[11] = {
     { 274, 114 },
     { 283, 141 },
     { 310, 142 },
@@ -75,6 +75,10 @@ int main() {
 
     drawcircle(100, 100, 50, 12);
     drawpolygon(11, 15, 0, 0, star13h);
+    
+    int test;
+    loadbitmap("image.bmp", &test);
+    drawimage(test, 10, 10);
     
     printf(1, "This was the demo for mode 0x13...\n");
     

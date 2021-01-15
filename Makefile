@@ -184,13 +184,15 @@ UPROGS=\
 	_rm\
 	_sh\
 	_stressfs\
-	_usertests\
 	_wc\
 	_zombie\
 	_demo\
+	_hexdump\
 
-fs.img: mkfs $(UPROGS)
-	./mkfs fs.img $(UPROGS)
+USERFILES=image.bmp
+
+fs.img: mkfs $(USERFILES) $(UPROGS)
+	./mkfs fs.img  $(USERFILES) $(UPROGS)
 
 -include *.d
 

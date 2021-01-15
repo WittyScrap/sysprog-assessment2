@@ -2,7 +2,7 @@
 #include "user.h"
 
 // Batched operations
-static Batch operations;
+static batchedqueue operations;
 
 /**
  * Begins a new graphics operation.
@@ -16,13 +16,13 @@ void begingraphics() {
  * Adds a new operation to the ops queue.
  * 
  */
-void addoperation(BatchedCall type, int c, ...) {
+void addoperation(batchedcall type, int c, ...) {
     if (operations.count >= MAX_BATCHED_OPS) {
         flush(&operations);
         operations.count = 0;
     }
 
-    BatchedOperation op;
+    batchedoperation op;
     op.type = type;
     op.color = c;
 
@@ -101,15 +101,24 @@ void drawcircle(int x, int y, int r, int c) {
  * @param vertices The vertices list.
  * 
  */
-void drawpolygon(int count, int color, int x, int y, Vertex vertices[]) {
-    Vertex a = *vertices;
+void drawpolygon(int count, int color, int x, int y, point vertices[]) {
+    point a = *vertices;
     
     for (int i = 1; i < count; i += 1) {
-        Vertex b = vertices[i];
+        point b = vertices[i];
 
         addoperation(BC_LINE, color, a.x + x, a.y + y, b.x + x, b.y + y);
         a = b;
     }
+}
+
+/**
+ * Draws a bitmap stored in `img` at location `x`, `y`,
+ * in mode 0x13. This function won't do anything in mode 0x12.
+ * 
+ */
+void drawimage(int img, int x, int y) {
+    addoperation(BC_IMAGE, 0, img, x, y);
 }
 
 /**
