@@ -65,3 +65,9 @@ void drawimage(bitmap* img, int x, int y);
 void drawemptycircle(int x, int y, int r, int c);
 void clearcolor(int c);
 void endgraphics();
+
+// random.c
+
+void seed(int);
+uint random(void);
+int randomrange(int lo, int hi);
