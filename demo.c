@@ -48,6 +48,7 @@ int main() {
     drawemptyrect(250,   100,    100,    200,    7);
     
     drawcircle(200, 240, 120, 12);
+    drawemptycircle(300, 300, 112, 10);
     drawpolygon(11, 15, 0, 0, star12h);
 
     printf(1, "This was the demo for mode 0x12...\n");
@@ -74,6 +75,7 @@ int main() {
     drawemptyrect(125,   40,     50,     85,     15);
 
     drawcircle(100, 100, 50, 12);
+    drawemptycircle(150, 120, 43, 10);
     drawpolygon(11, 15, 0, 0, star13h);
     
     printf(1, "This was the demo for mode 0x13...\n");

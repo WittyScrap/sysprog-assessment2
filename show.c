@@ -9,12 +9,12 @@ int main(int argc, char** argv) {
     
     setvideomode(0x13);
 
-    image img;
+    bitmap img;
     loadbitmap(argv[1], &img);
 
     begingraphics();
 
-    drawimage(img.id, 320 / 2 - img.width / 2, 200 / 2 - img.height / 2);
+    drawimage(&img, 320 / 2 - img.stride / 2, 200 / 2 - img.height / 2);
 
     endgraphics();
     present();

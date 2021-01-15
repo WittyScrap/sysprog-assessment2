@@ -117,8 +117,8 @@ void drawpolygon(int count, int color, int x, int y, point vertices[]) {
  * in mode 0x13. This function won't do anything in mode 0x12.
  * 
  */
-void drawimage(int img, int x, int y) {
-    addoperation(BC_IMAGE, 0, img, x, y);
+void drawimage(bitmap* img, int x, int y) {
+    addoperation(BC_IMAGE, 0, (int)(void*)img, x, y);
 }
 
 /**
@@ -128,6 +128,15 @@ void drawimage(int img, int x, int y) {
  */
 void drawemptyrect(int x, int y, int w, int h, int c) {
     addoperation(BC_EMPTYRECT, c, x, y, w, h);
+}
+
+/**
+ * Draws an empty, 1px thick circle at position `x`, `y`,
+ * of radius `r`, using color `c`.
+ * 
+ */
+void drawemptycircle(int x, int y, int r, int c) {
+    addoperation(BC_EMPTYCRCL, c, x, y, r);
 }
 
 /**

@@ -20,10 +20,6 @@ static uchar backbuff12hB[VGA_0x12_MAXSIZE_BYTES] = { 0 };
 static uchar backbuff12hL[VGA_0x12_MAXSIZE_BYTES] = { 0 };
 static uchar backbuff13h [VGA_0x13_MAXSIZE_BYTES] = { 0 };
 
-// Image storage
-static bitmap images[10];
-static uint lastimage;
-
 /** --- Video mode handlers --- */
 
 /**
@@ -500,8 +496,7 @@ static void clearscreen0x12(int params[static 10], int c) {
  * 
  */
 static void plotimage0x13(int params[static 10], int c) {
-    const int img = params[0];
-    const bitmap* bmp = &images[img];
+    const bitmap* bmp = (bitmap*)(void*)params[0];
 
     const int x = params[1];
     const int y = params[2];
@@ -572,6 +567,143 @@ static void plotemptyrect0x12(int params[static 10], int c) {
     }
 }
 
+/**
+ * Plots an empty, 1px thick circle at a given
+ * location and radius.
+ * 
+ * Midpoint circle algorithm by https://rosettacode.org/wiki/Bitmap/Midpoint_circle_algorithm#C
+ * 
+ */
+static void plotemptycircle0x13(int params[static 10], int c) {
+    int x0 = params[0];
+    int y0 = params[1];
+    int r = params[2];
+    
+    int f = 1 - r;
+    int ddF_x = 0;
+    int ddF_y = -2 * r;
+    int x = 0;
+    int y = r;
+
+    *(backbuff13h + VGA_0x13_OFFSET(x0, y0 + r)) = c;
+    *(backbuff13h + VGA_0x13_OFFSET(x0, y0 - r)) = c;
+    *(backbuff13h + VGA_0x13_OFFSET(x0 + r, y0)) = c;
+    *(backbuff13h + VGA_0x13_OFFSET(x0 - r, y0)) = c;
+
+    while (x < y) {
+        if (f >= 0) {
+            y -= 1;
+            ddF_y += 2;
+            f += ddF_y;
+        }
+
+        x += 1;
+        ddF_x += 2;
+        f += ddF_x + 1;
+
+        *(backbuff13h + VGA_0x13_OFFSET(x0 + x, y0 + y)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 - x, y0 + y)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 + x, y0 - y)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 - x, y0 - y)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 + y, y0 + x)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 - y, y0 + x)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 + y, y0 - x)) = c;
+        *(backbuff13h + VGA_0x13_OFFSET(x0 - y, y0 - x)) = c;
+    }
+}
+
+
+/**
+ * Plots an empty, 1px thick circle at a given
+ * location and radius.
+ * 
+ * Midpoint circle algorithm by https://rosettacode.org/wiki/Bitmap/Midpoint_circle_algorithm#C
+ * 
+ */
+static void plotemptycircle0x12(int params[static 10], int c) {
+    int x0 = params[0];
+    int y0 = params[1];
+    int r = params[2];
+    
+    int f = 1 - r;
+    int ddF_x = 0;
+    int ddF_y = -2 * r;
+    int x = 0;
+    int y = r;
+    
+    params[0] = x0;
+    params[1] = y0 + r;
+
+    plotpixel0x12(params, c);
+
+    params[0] = x0;
+    params[1] = y0 - r;
+
+    plotpixel0x12(params, c);
+
+    params[0] = x0 + r;
+    params[1] = y0;
+
+    plotpixel0x12(params, c);
+
+    params[0] = x0 - r;
+    params[1] = y0;
+
+    plotpixel0x12(params, c);
+
+    while (x < y) {
+        if (f >= 0) {
+            y -= 1;
+            ddF_y += 2;
+            f += ddF_y;
+        }
+
+        x += 1;
+        ddF_x += 2;
+        f += ddF_x + 1;
+
+        params[0] = x0 + x;
+        params[1] = y0 + y;
+        
+        plotpixel0x12(params, c);
+
+        params[0] = x0 - x;
+        params[1] = y0 + y;
+
+        plotpixel0x12(params, c);
+
+        params[0] = x0 + x;
+        params[1] = y0 - y;
+
+        plotpixel0x12(params, c);
+
+        params[0] = x0 - x;
+        params[1] = y0 - y;
+
+        plotpixel0x12(params, c);
+
+        params[0] = x0 + y;
+        params[1] = y0 + x;
+
+        plotpixel0x12(params, c);
+        
+        params[0] = x0 - y;
+        params[1] = y0 + x;
+
+        plotpixel0x12(params, c);
+        
+        params[0] = x0 + y;
+        params[1] = y0 - x;
+
+        plotpixel0x12(params, c);
+
+        params[0] = x0 - y;
+        params[1] = y0 - x;
+
+        plotpixel0x12(params, c);
+    }
+}
+
 /** --- Function switchers --- */
 
 
@@ -587,6 +719,7 @@ static const void(*mode12[])(int[static 10], int) = {
     [BC_CIRCLE]     plotcircle0x12,
     [BC_IMAGE]      plotimage0x12,
     [BC_EMPTYRECT]  plotemptyrect0x12,
+    [BC_EMPTYCRCL]  plotemptycircle0x12,
     // TODO: Add any further primitive functions...
 };
 
@@ -602,6 +735,7 @@ static const void(*mode13[])(int[static 10], int) = {
     [BC_CIRCLE]     plotcircle0x13,
     [BC_IMAGE]      plotimage0x13,
     [BC_EMPTYRECT]  plotemptyrect0x13,
+    [BC_EMPTYCRCL]  plotemptycircle0x13,
     // TODO: Add any further primitive functions...
 };
 
@@ -836,11 +970,10 @@ enum
  */
 int sys_loadbitmap() {
     char* filename;
-    bitmap* img = images + lastimage;
-    image* ret;
+    bitmap* img;
     struct inode *ip;
 
-    if (argptr(0, &filename, sizeof(char*)) < 0 || argptr(1, (char**)&ret, sizeof(image*)) < 0) {
+    if (argptr(0, &filename, sizeof(char*)) < 0 || argptr(1, (char**)&img, sizeof(bitmap*)) < 0) {
         return -1;
     }
 
@@ -882,11 +1015,35 @@ int sys_loadbitmap() {
         memmove(img->data + pos, data + y * stride, stride);
     }
 
-    ret->width = stride;
-    ret->height = img->height;
-    ret->id = lastimage;
+    return 0;
+}
 
-    lastimage += 1;
+/**
+ * Draws an image in mode 0x13.
+ * This function does nothing in mode 0x12, as
+ * indexed images cannot be mapped to mode 12 colors
+ * directly.
+ * 
+ */
+int sys_plotimage(void) {
+    bitmap* img;
+    int x;
+    int y;
+    int color;
+
+    if (argptr(0, (char**)&img, sizeof(bitmap*)) < 0 ||
+        argint(1, &x) < 0 ||
+        argint(2, &y) < 0 ||
+        argint(1, &color) < 0) {
+        return -1;
+    }
+
+    int params[10];
+    params[0] = (int)(void*)img;
+    params[1] = x;
+    params[2] = y;
+
+    FUNCTIONSET(currentvgamode)[BC_IMAGE](params, color);
 
     return 0;
 }

@@ -191,7 +191,7 @@ UPROGS=\
 	_wc\
 	_zombie\
 
-USERFILES=image.bmp sans.bmp
+USERFILES=image.bmp sans_01.bmp sans_02.bmp sans_11.bmp sans_12.bmp sans_21.bmp sans_22.bmp sans_31.bmp sans_32.bmp
 
 fs.img: mkfs $(USERFILES) $(UPROGS)
 	./mkfs fs.img  $(USERFILES) $(UPROGS)

@@ -107,6 +107,7 @@ extern int sys_clear(void);
 extern int sys_present(void);
 extern int sys_flush(void);
 extern int sys_loadbitmap(void);
+extern int sys_plotimage(void);
 // TODO: Expose your system call assembly function to C.
 
 static int (*syscalls[])(void) = {
@@ -139,6 +140,7 @@ static int (*syscalls[])(void) = {
     [SYS_present]       sys_present,
     [SYS_flush]         sys_flush,
     [SYS_loadbitmap]    sys_loadbitmap,
+    [SYS_plotimage]     sys_plotimage,
     // TODO: Add your system call function to the OS syscall table.
 };
 

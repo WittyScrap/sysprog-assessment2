@@ -28,3 +28,4 @@
 #define SYS_present      27
 #define SYS_flush        28
 #define SYS_loadbitmap   29
+#define SYS_plotimage    30
