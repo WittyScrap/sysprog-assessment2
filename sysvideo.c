@@ -493,6 +493,8 @@ static void clearscreen0x12(int params[static 10], int c) {
     memset(backbuff12hL, l, VGA_0x12_MAXSIZE_BYTES);
 }
 
+#include "shex.h"
+
 /**
  * Draws an image in mode 0x13.
  * 

@@ -71,7 +71,7 @@ int main() {
     drawline(160,   0,      160,    200,    6);
     
     drawrect(150,   85,     125,    62,     6);
-    drawrect(125,   40,     50,     85,     7);
+    drawrect(125,   40,     50,     85,     15);
 
     drawcircle(100, 100, 50, 12);
     drawpolygon(11, 15, 0, 0, star13h);
